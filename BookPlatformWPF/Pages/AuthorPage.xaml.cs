@@ -33,7 +33,7 @@ namespace BookPlatformWPF.Pages
                 {
                     Text = "У вас пока нет опубликованных книг.",
                     Foreground = Brushes.Gray,
-                    Margin = new Thickness(0, 10)
+                    Margin = new Thickness(0, 10, 0, 0)
                 });
                 return;
             }

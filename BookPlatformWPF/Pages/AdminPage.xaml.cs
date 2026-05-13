@@ -51,7 +51,7 @@ namespace BookPlatformWPF.Pages
                     : "💬 Отзыв: " + Truncate(c.Reviews?.ReviewText, 60);
 
                 string info = $"От: {c.Users?.DisplayName ?? "—"}\n{target}\nПричина: {c.Reason}";
-                int cid = c.ComplaintID;
+                int cid     = c.ComplaintID;
 
                 // У жалобы только кнопка "Отклонить" (закрыть жалобу)
                 ComplaintsPanel.Children.Add(
@@ -95,12 +95,12 @@ namespace BookPlatformWPF.Pages
             {
                 string who = req.Users != null
                     ? "👤 Пользователь: " + req.Users.DisplayName
-                    : "📚 Книга: " + (req.Books?.Title ?? "—");
+                    : "📚 Книга: "         + (req.Books?.Title ?? "—");
 
                 string info = $"{who}\nПричина: {req.Reason}";
-                int rid = req.UnfreezeRequestID;
-                int? uid = req.UserID;
-                int? bid = req.BookID;
+                int rid     = req.UnfreezeRequestID;
+                int? uid    = req.UserID;
+                int? bid    = req.BookID;
 
                 UnfreezePanel.Children.Add(
                     MakeRowWithApprove(
@@ -171,7 +171,7 @@ namespace BookPlatformWPF.Pages
                 string info = $"👤 {req.Users?.DisplayName ?? "—"}  " +
                               $"({req.RequestDate:dd.MM.yyyy})";
                 int reqId = req.RequestID;
-                int uid = req.UserID;
+                int uid   = req.UserID;
 
                 RoleRequestsPanel.Children.Add(
                     MakeRowWithApprove(
@@ -224,9 +224,9 @@ namespace BookPlatformWPF.Pages
                 foreach (var b in books)
                     FrozenPanel.Children.Add(new TextBlock
                     {
-                        Text = $"• {b.Title}  —  {b.FreezeReason ?? "без причины"}",
+                        Text        = $"• {b.Title}  —  {b.FreezeReason ?? "без причины"}",
                         TextWrapping = TextWrapping.Wrap,
-                        Margin = new Thickness(0, 2)
+                        Margin      = new Thickness(0, 2, 0, 2)
                     });
 
             // Замороженные пользователи
@@ -238,9 +238,9 @@ namespace BookPlatformWPF.Pages
                 foreach (var u in users)
                     FrozenPanel.Children.Add(new TextBlock
                     {
-                        Text = $"• {u.DisplayName} ({u.Login})  —  {u.FreezeReason ?? "без причины"}",
+                        Text        = $"• {u.DisplayName} ({u.Login})  —  {u.FreezeReason ?? "без причины"}",
                         TextWrapping = TextWrapping.Wrap,
-                        Margin = new Thickness(0, 2)
+                        Margin      = new Thickness(0, 2, 0, 2)
                     });
         }
 
@@ -267,45 +267,44 @@ namespace BookPlatformWPF.Pages
         {
             var border = new Border
             {
-                Background = user.IsFrozen
+                Background      = user.IsFrozen
                     ? new SolidColorBrush(Color.FromRgb(253, 234, 234))
                     : Brushes.White,
-                BorderBrush = Brushes.LightGray,
+                BorderBrush     = Brushes.LightGray,
                 BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(4),
-                Padding = new Thickness(12),
-                Margin = new Thickness(0, 3, 0, 0)
+                CornerRadius    = new CornerRadius(4),
+                Padding         = new Thickness(12),
+                Margin          = new Thickness(0, 3, 0, 0)
             };
 
-            var row = new StackPanel { Orientation = Orientation.Horizontal };
+            var row  = new StackPanel { Orientation = Orientation.Horizontal };
             var info = new StackPanel
             {
                 VerticalAlignment = VerticalAlignment.Center,
-                MinWidth = 220
+                MinWidth          = 220
             };
             info.Children.Add(new TextBlock
             {
-                Text = $"{user.DisplayName} ({user.Login})",
+                Text       = $"{user.DisplayName} ({user.Login})",
                 FontWeight = FontWeights.Bold
             });
             info.Children.Add(new TextBlock
             {
-                Text = "Роль: " + (user.Roles?.RoleName ?? "—"),
-                Foreground = Brushes.Gray,
-                FontSize = 12
+                Text       = "Роль: " + (user.Roles?.RoleName ?? "—"),
+                Foreground = Brushes.Gray, FontSize = 12
             });
 
             var btns = new StackPanel
             {
-                Orientation = Orientation.Horizontal,
+                Orientation       = Orientation.Horizontal,
                 VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(12, 0, 0, 0)
+                Margin            = new Thickness(12, 0, 0, 0)
             };
 
             // Смена роли
             var cmbRole = new ComboBox { Width = 135 };
-            cmbRole.Items.Add(new ComboBoxItem { Content = "Читатель", Tag = 1 });
-            cmbRole.Items.Add(new ComboBoxItem { Content = "Автор", Tag = 2 });
+            cmbRole.Items.Add(new ComboBoxItem { Content = "Читатель",      Tag = 1 });
+            cmbRole.Items.Add(new ComboBoxItem { Content = "Автор",         Tag = 2 });
             cmbRole.Items.Add(new ComboBoxItem { Content = "Администратор", Tag = 3 });
             cmbRole.SelectedIndex = user.RoleID - 1;
 
@@ -314,7 +313,7 @@ namespace BookPlatformWPF.Pages
             {
                 Content = "Сменить роль",
                 Padding = new Thickness(7, 3, 7, 3),
-                Margin = new Thickness(4, 0, 0, 0)
+                Margin  = new Thickness(4, 0, 0, 0)
             };
             btnRole.Click += (s, e) =>
             {
@@ -332,7 +331,7 @@ namespace BookPlatformWPF.Pages
             {
                 Content = "Пароль",
                 Padding = new Thickness(7, 3, 7, 3),
-                Margin = new Thickness(4, 0, 0, 0)
+                Margin  = new Thickness(4, 0, 0, 0)
             };
             btnPwd.Click += (s, e) =>
             {
@@ -348,15 +347,15 @@ namespace BookPlatformWPF.Pages
             };
 
             // Заморозить / Разморозить
-            bool frozen = user.IsFrozen;
+            bool frozen   = user.IsFrozen;
             var btnFreeze = new Button
             {
-                Content = frozen ? "✅ Разморозить" : "❄️ Заморозить",
-                Padding = new Thickness(7, 3, 7, 3),
-                Margin = new Thickness(4, 0, 0, 0),
+                Content         = frozen ? "✅ Разморозить" : "❄️ Заморозить",
+                Padding         = new Thickness(7, 3, 7, 3),
+                Margin          = new Thickness(4, 0, 0, 0),
                 BorderThickness = new Thickness(0),
-                Foreground = Brushes.White,
-                Background = frozen
+                Foreground      = Brushes.White,
+                Background      = frozen
                     ? new SolidColorBrush(Color.FromRgb(39, 174, 96))
                     : new SolidColorBrush(Color.FromRgb(231, 76, 60))
             };
@@ -367,7 +366,7 @@ namespace BookPlatformWPF.Pages
 
                 if (u.IsFrozen)
                 {
-                    u.IsFrozen = false;
+                    u.IsFrozen     = false;
                     u.FreezeReason = null;
                     Core.DB.SaveChanges();
                     Core.Reset();
@@ -377,7 +376,7 @@ namespace BookPlatformWPF.Pages
                     string reason = Microsoft.VisualBasic.Interaction.InputBox(
                         "Причина заморозки:", "Заморозка", "");
                     if (string.IsNullOrWhiteSpace(reason)) return;
-                    u.IsFrozen = true;
+                    u.IsFrozen     = true;
                     u.FreezeReason = reason;
                     Core.DB.SaveChanges();
                     Core.Reset();
@@ -405,21 +404,21 @@ namespace BookPlatformWPF.Pages
         private Border MakeRow(string text, Action onDecline)
         {
             var border = MakeBorder();
-            var sp = new StackPanel { Orientation = Orientation.Horizontal };
+            var sp     = new StackPanel { Orientation = Orientation.Horizontal };
 
             sp.Children.Add(new TextBlock
             {
-                Text = text,
+                Text        = text,
                 TextWrapping = TextWrapping.Wrap,
-                MaxWidth = 560,
+                MaxWidth    = 560,
                 VerticalAlignment = VerticalAlignment.Center
             });
 
             var btn = new Button
             {
-                Content = "✖ Отклонить",
-                Padding = new Thickness(8, 4, 8, 4),
-                Margin = new Thickness(10, 0, 0, 0),
+                Content           = "✖ Отклонить",
+                Padding           = new Thickness(8, 4, 8, 4),
+                Margin            = new Thickness(10, 0, 0, 0),
                 VerticalAlignment = VerticalAlignment.Center
             };
             btn.Click += (s, e) => onDecline();
@@ -433,35 +432,35 @@ namespace BookPlatformWPF.Pages
         private Border MakeRowWithApprove(string text, Action onApprove, Action onDecline)
         {
             var border = MakeBorder();
-            var sp = new StackPanel { Orientation = Orientation.Horizontal };
+            var sp     = new StackPanel { Orientation = Orientation.Horizontal };
 
             sp.Children.Add(new TextBlock
             {
-                Text = text,
+                Text        = text,
                 TextWrapping = TextWrapping.Wrap,
-                MaxWidth = 500,
+                MaxWidth    = 500,
                 VerticalAlignment = VerticalAlignment.Center
             });
 
             var btnOk = new Button
             {
-                Content = "✔ Принять",
-                Padding = new Thickness(8, 4, 8, 4),
-                Margin = new Thickness(10, 0, 4, 0),
-                Background = new SolidColorBrush(Color.FromRgb(39, 174, 96)),
-                Foreground = Brushes.White,
-                BorderThickness = new Thickness(0),
+                Content           = "✔ Принять",
+                Padding           = new Thickness(8, 4, 8, 4),
+                Margin            = new Thickness(10, 0, 4, 0),
+                Background        = new SolidColorBrush(Color.FromRgb(39, 174, 96)),
+                Foreground        = Brushes.White,
+                BorderThickness   = new Thickness(0),
                 VerticalAlignment = VerticalAlignment.Center
             };
             btnOk.Click += (s, e) => onApprove();
 
             var btnNo = new Button
             {
-                Content = "✖ Отклонить",
-                Padding = new Thickness(8, 4, 8, 4),
-                Background = new SolidColorBrush(Color.FromRgb(231, 76, 60)),
-                Foreground = Brushes.White,
-                BorderThickness = new Thickness(0),
+                Content           = "✖ Отклонить",
+                Padding           = new Thickness(8, 4, 8, 4),
+                Background        = new SolidColorBrush(Color.FromRgb(231, 76, 60)),
+                Foreground        = Brushes.White,
+                BorderThickness   = new Thickness(0),
                 VerticalAlignment = VerticalAlignment.Center
             };
             btnNo.Click += (s, e) => onDecline();
@@ -474,27 +473,27 @@ namespace BookPlatformWPF.Pages
 
         private Border MakeBorder() => new Border
         {
-            Background = Brushes.White,
-            BorderBrush = Brushes.LightGray,
+            Background      = Brushes.White,
+            BorderBrush     = Brushes.LightGray,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(4),
-            Padding = new Thickness(10),
-            Margin = new Thickness(0, 3, 0, 0)
+            CornerRadius    = new CornerRadius(4),
+            Padding         = new Thickness(10),
+            Margin          = new Thickness(0, 3, 0, 0)
         };
 
         private TextBlock SectionHeader(string text) => new TextBlock
         {
-            Text = text,
+            Text       = text,
             FontWeight = FontWeights.Bold,
-            FontSize = 15,
-            Margin = new Thickness(0, 10, 0, 5)
+            FontSize   = 15,
+            Margin     = new Thickness(0, 10, 0, 5)
         };
 
         private TextBlock NoData(string text) => new TextBlock
         {
-            Text = text,
+            Text       = text,
             Foreground = Brushes.Gray,
-            Margin = new Thickness(0, 3)
+            Margin     = new Thickness(0, 3, 0, 3)
         };
 
         // Обрезаем длинный текст для превью

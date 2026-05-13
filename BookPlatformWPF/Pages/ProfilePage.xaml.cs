@@ -112,7 +112,7 @@ namespace BookPlatformWPF.Pages
                 {
                     Text = "Вы ещё не оставляли отзывов.",
                     Foreground = Brushes.Gray,
-                    Margin = new Thickness(0, 5)
+                    Margin = new Thickness(0, 5, 0, 5)
                 });
                 return;
             }
