@@ -66,6 +66,11 @@
               Height="28"
               SelectionChanged="Filter_Changed"/>
 
+
+            <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
+                <WrapPanel x:Name="BooksPanel" Margin="0,4"/>
+            </ScrollViewer>
+
         </Grid>
     </Grid>
 </Page>

@@ -10,23 +10,21 @@ namespace BookPlatformWPF.Pages
 {
     public partial class CatalogPage : Page
     {
-        // Все книги загружаем один раз — фильтруем уже локально
         private List<Books> _allBooks = new List<Books>();
+        private bool _isLoaded = false;
 
         public CatalogPage()
         {
             InitializeComponent();
             LoadGenres();
             LoadBooks();
+            _isLoaded = true;
         }
 
-        // Заполняем ComboBox жанров
         private void LoadGenres()
         {
-            // Берём жанры через EF
             var dbGenres = Core.DB.Genres.OrderBy(g => g.Name).ToList();
 
-            // Строим список: сначала "Все жанры" с ID=0, потом реальные жанры
             var list = new List<object>();
             list.Add(new { GenreID = 0, Name = "Все жанры" });
             foreach (var g in dbGenres)
@@ -40,46 +38,45 @@ namespace BookPlatformWPF.Pages
 
         private void LoadBooks()
         {
-            // Include — подгружает связанные таблицы (JOIN в SQL)
-            // Without Include они будут null
             _allBooks = Core.DB.Books
-                .Include(b => b.Users)      // автор книги
-                .Include(b => b.Reviews)    // нужны для расчёта рейтинга
-                .Include(b => b.Genres)     // нужны для фильтрации по жанру
-                .Where(b => !b.IsFrozen)    // только незамороженные
+                .Include(b => b.Users)
+                .Include(b => b.Reviews)
+                .Include(b => b.Genres)
+                .Where(b => !b.IsFrozen)
                 .ToList();
 
             ApplyFilters();
         }
 
         private void Filter_Changed(object sender, System.EventArgs e)
-            => ApplyFilters();
+        {
+            if (!_isLoaded) return;
+            ApplyFilters();
+        }
 
         private void ApplyFilters()
         {
+            if (BooksPanel == null) return;
+
             string search = TxtSearch?.Text?.ToLower() ?? "";
 
-            // Читаем выбранный жанр
             int genreID = 0;
             if (CmbGenre?.SelectedValue != null)
                 int.TryParse(CmbGenre.SelectedValue.ToString(), out genreID);
 
-            // Фильтруем список в памяти — без повторных запросов к БД
             IEnumerable<Books> filtered = _allBooks.Where(b =>
                 (string.IsNullOrEmpty(search) ||
                  b.Title.ToLower().Contains(search) ||
-                 b.Users.DisplayName.ToLower().Contains(search)) &&
+                 (b.Users != null && b.Users.DisplayName.ToLower().Contains(search))) &&
                 (genreID == 0 || b.Genres.Any(g => g.GenreID == genreID))
             );
 
-            // Сортировка
             bool byRating = (CmbSort?.SelectedIndex ?? 0) == 1;
             filtered = byRating
                 ? filtered.OrderByDescending(b =>
                     b.Reviews.Any() ? b.Reviews.Average(r => (double)r.Rating) : 0)
                 : filtered.OrderBy(b => b.Title);
 
-            // Перерисовываем карточки
             BooksPanel.Children.Clear();
             foreach (var book in filtered)
             {
@@ -94,90 +91,165 @@ namespace BookPlatformWPF.Pages
             var border = new Border
             {
                 Width = 170,
-                Height = 235,
+                Height = 250,
                 Margin = new Thickness(6),
                 Background = Brushes.White,
-                BorderBrush = Brushes.LightGray,
+                BorderBrush = new SolidColorBrush(Color.FromRgb(220, 220, 220)),
                 BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(6),
+                CornerRadius = new CornerRadius(8),
                 Cursor = System.Windows.Input.Cursors.Hand
             };
 
-            var sp = new StackPanel { Margin = new Thickness(8) };
+            var sp = new StackPanel();
 
-            // Обложка — цветной блок с иконкой книги
-            var cover = new Border
+            // ── ОБЛОЖКА — цветной градиент + инициалы ──
+            var coverBorder = new Border
             {
-                Height = 90,
-                Background = new SolidColorBrush(Color.FromRgb(74, 144, 217)),
-                CornerRadius = new CornerRadius(4),
-                Margin = new Thickness(0, 0, 0, 7)
+                Height = 110,
+                CornerRadius = new CornerRadius(8, 8, 0, 0),
+                ClipToBounds = true,
+                Background = GetCoverBrush(book.BookID)
             };
-            cover.Child = new TextBlock
-            {
-                Text = "📖",
-                FontSize = 36,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center
-            };
+            coverBorder.Child = MakeCoverText(book.Title);
+            sp.Children.Add(coverBorder);
 
-            sp.Children.Add(cover);
+            // ── ТЕКСТ ──
+            var info = new StackPanel { Margin = new Thickness(8, 6, 8, 4) };
 
-            sp.Children.Add(new TextBlock
+            info.Children.Add(new TextBlock
             {
                 Text = book.Title,
                 FontWeight = FontWeights.Bold,
                 TextWrapping = TextWrapping.Wrap,
-                MaxHeight = 40,
-                FontSize = 12
+                MaxHeight = 36,
+                FontSize = 12,
+                Foreground = new SolidColorBrush(Color.FromRgb(30, 30, 30))
             });
-            sp.Children.Add(new TextBlock
+            info.Children.Add(new TextBlock
             {
                 Text = book.Users?.DisplayName ?? "—",
-                Foreground = Brushes.Gray,
+                Foreground = new SolidColorBrush(Color.FromRgb(120, 120, 120)),
                 FontSize = 11,
                 Margin = new Thickness(0, 2, 0, 0)
             });
-            sp.Children.Add(new TextBlock
+
+            // Звёздочки + цифра рейтинга
+            var ratingRow = new StackPanel
             {
-                Text = $"⭐ {avgRating:F1}",
-                FontSize = 11,
-                Margin = new Thickness(0, 3, 0, 4)
+                Orientation = Orientation.Horizontal,
+                Margin = new Thickness(0, 4, 0, 0)
+            };
+            ratingRow.Children.Add(new TextBlock
+            {
+                Text = GetStars(avgRating),
+                Foreground = new SolidColorBrush(Color.FromRgb(255, 180, 0)),
+                FontSize = 11
             });
-
-            // Кнопки
-            var btnPanel = new StackPanel { Orientation = Orientation.Horizontal };
-
-            int bookId = book.BookID; // важно: захватываем в переменную для лямбды
-
-            var btnRead = new Button
+            ratingRow.Children.Add(new TextBlock
             {
-                Content = "Читать",
-                FontSize = 10,
-                Padding = new Thickness(5, 2, 5, 2),
-                Background = new SolidColorBrush(Color.FromRgb(74, 144, 217)),
-                Foreground = Brushes.White,
-                BorderThickness = new Thickness(0)
-            };
-            btnRead.Click += (s, e) => MainWindow.Instance.Navigate(new BookPage(bookId));
+                Text = $" {avgRating:F1}",
+                Foreground = Brushes.Gray,
+                FontSize = 11
+            });
+            info.Children.Add(ratingRow);
+            sp.Children.Add(info);
 
-            var btnAdd = new Button
+            // ── КНОПКИ ──
+            // Button в WPF .NET Framework не имеет CornerRadius —
+            // оборачиваем в Border чтобы сделать скруглённые углы
+            var btnPanel = new StackPanel
             {
-                Content = "В список",
-                FontSize = 10,
-                Padding = new Thickness(5, 2, 5, 2),
-                Margin = new Thickness(3, 0, 0, 0),
-                Background = new SolidColorBrush(Color.FromRgb(39, 174, 96)),
-                Foreground = Brushes.White,
-                BorderThickness = new Thickness(0)
+                Orientation = Orientation.Horizontal,
+                Margin = new Thickness(8, 0, 8, 8)
             };
-            btnAdd.Click += (s, e) => ShowAddToListDialog(bookId, book.Title);
 
-            btnPanel.Children.Add(btnRead);
-            btnPanel.Children.Add(btnAdd);
+            int bookId = book.BookID;
+
+            btnPanel.Children.Add(MakeCardButton(
+                "Читать", Color.FromRgb(74, 144, 217),
+                () => MainWindow.Instance.Navigate(new BookPage(bookId))));
+
+            btnPanel.Children.Add(MakeCardButton(
+                "+ Список", Color.FromRgb(39, 174, 96),
+                () => ShowAddToListDialog(bookId, book.Title),
+                leftMargin: 4));
+
             sp.Children.Add(btnPanel);
             border.Child = sp;
             return border;
+        }
+
+        // Кнопка со скруглёнными углами через Border
+        private Border MakeCardButton(string label, Color bg,
+                                      System.Action onClick, int leftMargin = 0)
+        {
+            var brd = new Border
+            {
+                Background = new SolidColorBrush(bg),
+                CornerRadius = new CornerRadius(4),
+                Padding = new Thickness(10, 4, 10, 4),
+                Margin = new Thickness(leftMargin, 0, 0, 0),
+                Cursor = System.Windows.Input.Cursors.Hand
+            };
+            brd.Child = new TextBlock
+            {
+                Text = label,
+                Foreground = Brushes.White,
+                FontSize = 11
+            };
+            // Клик на Border работает через MouseLeftButtonUp
+            brd.MouseLeftButtonUp += (s, e) => onClick();
+            return brd;
+        }
+
+        // Уникальный градиент по ID книги (8 цветовых схем)
+        private Brush GetCoverBrush(int bookId)
+        {
+            var colors = new[]
+            {
+                new[] { Color.FromRgb(74,  144, 217), Color.FromRgb(30,  90, 170) },
+                new[] { Color.FromRgb(39,  174,  96), Color.FromRgb(20, 120,  60) },
+                new[] { Color.FromRgb(155,  89, 182), Color.FromRgb(100, 50, 140) },
+                new[] { Color.FromRgb(231,  76,  60), Color.FromRgb(170, 40,  30) },
+                new[] { Color.FromRgb(230, 126,  34), Color.FromRgb(170, 80,  10) },
+                new[] { Color.FromRgb( 26, 188, 156), Color.FromRgb(15, 130, 110) },
+                new[] { Color.FromRgb( 52,  73,  94), Color.FromRgb(30,  50,  70) },
+                new[] { Color.FromRgb(241, 196,  15), Color.FromRgb(180, 140,   5) },
+            };
+            var pair = colors[bookId % colors.Length];
+            return new LinearGradientBrush(pair[0], pair[1], 135);
+        }
+
+        // Инициалы из первых букв первых двух слов названия
+        private TextBlock MakeCoverText(string title)
+        {
+            string initials = "?";
+            var words = (title ?? "").Trim().Split(' ');
+            if (words.Length >= 2)
+                initials = $"{words[0][0]}{words[1][0]}".ToUpper();
+            else if (words.Length == 1 && words[0].Length >= 2)
+                initials = words[0].Substring(0, 2).ToUpper();
+            else if (words.Length == 1 && words[0].Length == 1)
+                initials = words[0].ToUpper();
+
+            return new TextBlock
+            {
+                Text = initials,
+                FontSize = 38,
+                FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(
+                                          Color.FromArgb(180, 255, 255, 255)),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+        }
+
+        // Рейтинг из 10 → 5 звёзд
+        private string GetStars(double rating)
+        {
+            int stars = (int)System.Math.Round(rating / 2.0);
+            stars = System.Math.Max(0, System.Math.Min(5, stars));
+            return new string('★', stars) + new string('☆', 5 - stars);
         }
 
         private void ShowAddToListDialog(int bookId, string bookTitle)
@@ -230,23 +302,18 @@ namespace BookPlatformWPF.Pages
 
         private void AddToList(int bookId, string section)
         {
-            // Ищем — вдруг книга уже есть в каком-то списке
             var existing = Core.DB.ReadingLists
                 .FirstOrDefault(r => r.UserID == SessionManager.UserID
                                   && r.BookID == bookId);
             if (existing != null)
-            {
-                existing.Section = section; // просто меняем раздел
-            }
+                existing.Section = section;
             else
-            {
                 Core.DB.ReadingLists.Add(new ReadingLists
                 {
                     UserID = SessionManager.UserID,
                     BookID = bookId,
                     Section = section
                 });
-            }
 
             Core.DB.SaveChanges();
             Core.Reset();
