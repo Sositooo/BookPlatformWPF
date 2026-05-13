@@ -1,0 +1,23 @@
+﻿<Page x:Class="BookPlatformWPF.Pages.AuthorPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      Title="Страница автора">
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="✍️ Мои книги" FontSize="22" FontWeight="Bold"/>
+
+        <Button Grid.Row="1" Content="+ Добавить книгу"
+                HorizontalAlignment="Left" Margin="0,10,0,10"
+                Padding="12,6" Background="#27AE60" Foreground="White"
+                Click="BtnAddBook_Click"/>
+
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <StackPanel x:Name="BooksPanel"/>
+        </ScrollViewer>
+    </Grid>
+</Page>
