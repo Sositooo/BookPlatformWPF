@@ -1,5 +1,5 @@
-﻿using System;
-using System.Data.SqlClient;
+﻿using System.Data.Entity;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -18,122 +18,139 @@ namespace BookPlatformWPF.Pages
 
         private void LoadProfile()
         {
+            // Данные берём из SessionManager — там хранится EF-объект пользователя
             TxtName.Text = "Имя: " + SessionManager.DisplayName;
             TxtLogin.Text = "Логин: " + SessionManager.Login;
             TxtEmail.Text = "Email: " + SessionManager.Email;
-            TxtRole.Text = "Роль: " + GetRoleName(SessionManager.RoleID);
+            TxtRole.Text = "Роль: " + RoleName(SessionManager.RoleID);
 
+            // Показываем предупреждение если аккаунт заморожен
             if (SessionManager.IsFrozen)
             {
                 FreezeWarning.Visibility = Visibility.Visible;
                 TxtFreezeReason.Text = "Причина: " +
                     (string.IsNullOrEmpty(SessionManager.FreezeReason)
-                     ? "не указана" : SessionManager.FreezeReason);
+                        ? "не указана"
+                        : SessionManager.FreezeReason);
             }
 
-            // Кнопку «Стать автором» показываем только Читателям без активной заявки
-            if (SessionManager.RoleID == 1 && !HasActiveRoleRequest())
-                BtnApplyAuthor.Visibility = Visibility.Visible;
-        }
-
-        private string GetRoleName(int roleId) => roleId switch
-        {
-            1 => "Читатель",
-            2 => "Автор",
-            3 => "Администратор",
-            _ => "—"
-        };
-
-        private bool HasActiveRoleRequest()
-        {
-            using (var conn = DatabaseHelper.GetConnection())
+            // Кнопку заявки показываем только Читателям без активной заявки
+            if (SessionManager.RoleID == 1)
             {
-                conn.Open();
-                var cmd = new SqlCommand(
-                    "SELECT COUNT(*) FROM RoleRequests WHERE UserID=@uid", conn);
-                cmd.Parameters.AddWithValue("@uid", SessionManager.UserID);
-                return (int)cmd.ExecuteScalar() > 0;
+                bool hasRequest = Core.DB.RoleRequests
+                    .Any(r => r.UserID == SessionManager.UserID);
+                if (!hasRequest)
+                    BtnApplyAuthor.Visibility = Visibility.Visible;
             }
         }
 
+        private string RoleName(int id)
+        {
+            switch (id)
+            {
+                case 1: return "Читатель";
+                case 2: return "Автор";
+                case 3: return "Администратор";
+                default: return "—";
+            }
+        }
+
+        // Подать заявку на роль Автора
         private void BtnApplyAuthor_Click(object sender, RoutedEventArgs e)
         {
             if (MessageBox.Show("Подать заявку на роль Автора?", "Подтверждение",
                 MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
-            using (var conn = DatabaseHelper.GetConnection())
+
+            Core.DB.RoleRequests.Add(new RoleRequests
             {
-                conn.Open();
-                var cmd = new SqlCommand(
-                    "INSERT INTO RoleRequests(UserID) VALUES(@uid)", conn);
-                cmd.Parameters.AddWithValue("@uid", SessionManager.UserID);
-                cmd.ExecuteNonQuery();
-            }
-            MessageBox.Show("Заявка отправлена! Ожидайте решения администратора.", "Готово");
+                UserID = SessionManager.UserID
+                // RequestDate ставится через DEFAULT в БД
+            });
+
+            Core.DB.SaveChanges();
+            Core.Reset();
+
+            MessageBox.Show("Заявка отправлена! Ожидайте решения.", "Готово");
             BtnApplyAuthor.Visibility = Visibility.Collapsed;
         }
 
+        // Оспорить заморозку аккаунта
         private void BtnAppealFreeze_Click(object sender, RoutedEventArgs e)
         {
-            var reason = Microsoft.VisualBasic.Interaction.InputBox(
-                "Укажите причину для оспаривания заморозки:", "Оспорить заморозку", "");
+            // InputBox — из Microsoft.VisualBasic, которую добавили в References
+            string reason = Microsoft.VisualBasic.Interaction.InputBox(
+                "Укажите причину для оспаривания:", "Оспорить заморозку", "");
             if (string.IsNullOrWhiteSpace(reason)) return;
-            using (var conn = DatabaseHelper.GetConnection())
+
+            Core.DB.UnfreezeRequests.Add(new UnfreezeRequests
             {
-                conn.Open();
-                var cmd = new SqlCommand(
-                    "INSERT INTO UnfreezeRequests(UserID,BookID,Reason) VALUES(@uid,NULL,@r)", conn);
-                cmd.Parameters.AddWithValue("@uid", SessionManager.UserID);
-                cmd.Parameters.AddWithValue("@r", reason);
-                cmd.ExecuteNonQuery();
-            }
+                UserID = SessionManager.UserID,
+                BookID = null,   // это заявка на пользователя, не на книгу
+                Reason = reason
+            });
+
+            Core.DB.SaveChanges();
+            Core.Reset();
+
             MessageBox.Show("Заявка на разморозку отправлена.", "Готово");
         }
 
+        // Загрузить все отзывы пользователя
         private void LoadReviews()
         {
             ReviewsPanel.Children.Clear();
-            using (var conn = DatabaseHelper.GetConnection())
+
+            var reviews = Core.DB.Reviews
+                .Include(r => r.Books) // нужен Title книги
+                .Where(r => r.UserID == SessionManager.UserID)
+                .OrderByDescending(r => r.ReviewDate)
+                .ToList();
+
+            if (!reviews.Any())
             {
-                conn.Open();
-                string sql = @"SELECT r.ReviewID, b.Title, r.ReviewText, r.Rating, r.ReviewDate
-                               FROM Reviews r JOIN Books b ON r.BookID = b.BookID
-                               WHERE r.UserID = @uid ORDER BY r.ReviewDate DESC";
-                var cmd = new SqlCommand(sql, conn);
-                cmd.Parameters.AddWithValue("@uid", SessionManager.UserID);
-                using (var reader = cmd.ExecuteReader())
-                    while (reader.Read())
-                    {
-                        var border = new Border
-                        {
-                            Background = Brushes.White,
-                            BorderBrush = Brushes.LightGray,
-                            BorderThickness = new Thickness(1),
-                            CornerRadius = new CornerRadius(4),
-                            Padding = new Thickness(10),
-                            Margin = new Thickness(0, 4, 0, 0)
-                        };
-                        var sp = new StackPanel();
-                        sp.Children.Add(new TextBlock
-                        {
-                            Text = reader["Title"].ToString(),
-                            FontWeight = FontWeights.Bold,
-                            Margin = new Thickness(0, 0, 0, 3)
-                        });
-                        sp.Children.Add(new TextBlock
-                        {
-                            Text = $"⭐ {reader["Rating"]}/10  •  {((DateTime)reader["ReviewDate"]):dd.MM.yyyy}",
-                            Foreground = Brushes.Gray,
-                            FontSize = 12
-                        });
-                        sp.Children.Add(new TextBlock
-                        {
-                            Text = reader["ReviewText"].ToString(),
-                            TextWrapping = TextWrapping.Wrap,
-                            Margin = new Thickness(0, 4, 0, 0)
-                        });
-                        border.Child = sp;
-                        ReviewsPanel.Children.Add(border);
-                    }
+                ReviewsPanel.Children.Add(new TextBlock
+                {
+                    Text = "Вы ещё не оставляли отзывов.",
+                    Foreground = Brushes.Gray,
+                    Margin = new Thickness(0, 5)
+                });
+                return;
+            }
+
+            foreach (var review in reviews)
+            {
+                var border = new Border
+                {
+                    Background = Brushes.White,
+                    BorderBrush = Brushes.LightGray,
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(4),
+                    Padding = new Thickness(10),
+                    Margin = new Thickness(0, 4, 0, 0)
+                };
+
+                var sp = new StackPanel();
+                sp.Children.Add(new TextBlock
+                {
+                    Text = review.Books?.Title ?? "—",
+                    FontWeight = FontWeights.Bold,
+                    Margin = new Thickness(0, 0, 0, 3)
+                });
+                sp.Children.Add(new TextBlock
+                {
+                    Text = $"⭐ {review.Rating}/10  •  {review.ReviewDate:dd.MM.yyyy}",
+                    Foreground = Brushes.Gray,
+                    FontSize = 12
+                });
+                sp.Children.Add(new TextBlock
+                {
+                    Text = review.ReviewText,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(0, 4, 0, 0)
+                });
+
+                border.Child = sp;
+                ReviewsPanel.Children.Add(border);
             }
         }
     }

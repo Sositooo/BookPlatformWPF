@@ -1,4 +1,4 @@
-﻿using System.Data.SqlClient;
+﻿using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -20,44 +20,61 @@ namespace BookPlatformWPF.Pages
         private void LoadBooks()
         {
             BooksPanel.Children.Clear();
-            using (var conn = DatabaseHelper.GetConnection())
+
+            // Только книги текущего автора
+            var books = Core.DB.Books
+                .Where(b => b.AuthorID == SessionManager.UserID)
+                .OrderBy(b => b.Title)
+                .ToList();
+
+            if (!books.Any())
             {
-                conn.Open();
-                string sql = @"SELECT BookID, Title, IsFrozen, FreezeReason
-                               FROM Books WHERE AuthorID=@uid ORDER BY Title";
-                var cmd = new SqlCommand(sql, conn);
-                cmd.Parameters.AddWithValue("@uid", SessionManager.UserID);
-                using (var reader = cmd.ExecuteReader())
-                    while (reader.Read())
-                    {
-                        int bookId = (int)reader["BookID"];
-                        bool isFrozen = (bool)reader["IsFrozen"];
-                        string title = reader["Title"].ToString();
-                        string reason = reader["FreezeReason"]?.ToString();
-                        BooksPanel.Children.Add(CreateRow(bookId, title, isFrozen, reason));
-                    }
+                BooksPanel.Children.Add(new TextBlock
+                {
+                    Text = "У вас пока нет опубликованных книг.",
+                    Foreground = Brushes.Gray,
+                    Margin = new Thickness(0, 10)
+                });
+                return;
             }
+
+            foreach (var book in books)
+                BooksPanel.Children.Add(CreateRow(book));
         }
 
-        private Border CreateRow(int bookId, string title, bool isFrozen, string freezeReason)
+        private Border CreateRow(Books book)
         {
             var border = new Border
             {
-                Background = isFrozen ? new SolidColorBrush(Color.FromRgb(253, 234, 234)) : Brushes.White,
+                // Замороженные — красноватый фон
+                Background = book.IsFrozen
+                    ? new SolidColorBrush(Color.FromRgb(253, 234, 234))
+                    : Brushes.White,
                 BorderBrush = Brushes.LightGray,
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(4),
-                Padding = new Thickness(10),
+                Padding = new Thickness(12),
                 Margin = new Thickness(0, 4, 0, 0)
             };
-            var sp = new StackPanel { Orientation = Orientation.Horizontal };
 
-            var info = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-            info.Children.Add(new TextBlock { Text = (isFrozen ? "❄️ " : "") + title, FontWeight = FontWeights.Bold });
-            if (isFrozen && !string.IsNullOrEmpty(freezeReason))
+            var row = new StackPanel { Orientation = Orientation.Horizontal };
+            var info = new StackPanel
+            {
+                VerticalAlignment = VerticalAlignment.Center,
+                MinWidth = 320
+            };
+
+            info.Children.Add(new TextBlock
+            {
+                Text = (book.IsFrozen ? "❄️ " : "") + book.Title,
+                FontWeight = FontWeights.Bold,
+                FontSize = 14
+            });
+
+            if (book.IsFrozen && !string.IsNullOrEmpty(book.FreezeReason))
                 info.Children.Add(new TextBlock
                 {
-                    Text = "Причина: " + freezeReason,
+                    Text = "Причина заморозки: " + book.FreezeReason,
                     Foreground = Brushes.Red,
                     FontSize = 11
                 });
@@ -69,50 +86,54 @@ namespace BookPlatformWPF.Pages
                 Margin = new Thickness(15, 0, 0, 0)
             };
 
+            int bookId = book.BookID;
+
             var btnEdit = new Button
             {
-                Content = "Редактировать",
-                Padding = new Thickness(8, 4, 8, 4),
-                Margin = new Thickness(0, 0, 5, 0)
+                Content = "✏️ Редактировать",
+                Padding = new Thickness(8, 4, 8, 4)
             };
-            btnEdit.Click += (s, e) => MainWindow.Instance.Navigate(new AddEditBookPage(bookId));
-
+            btnEdit.Click += (s, e) =>
+                MainWindow.Instance.Navigate(new AddEditBookPage(bookId));
             btns.Children.Add(btnEdit);
 
-            if (isFrozen)
+            // Кнопка "Оспорить" — только для замороженных книг
+            if (book.IsFrozen)
             {
                 var btnAppeal = new Button
                 {
-                    Content = "Оспорить заморозку",
+                    Content = "⚖️ Оспорить заморозку",
                     Padding = new Thickness(8, 4, 8, 4),
-                    Margin = new Thickness(0, 0, 5, 0),
+                    Margin = new Thickness(6, 0, 0, 0),
                     Background = new SolidColorBrush(Color.FromRgb(231, 76, 60)),
-                    Foreground = Brushes.White
+                    Foreground = Brushes.White,
+                    BorderThickness = new Thickness(0)
                 };
                 btnAppeal.Click += (s, e) => AppealBookFreeze(bookId);
                 btns.Children.Add(btnAppeal);
             }
 
-            sp.Children.Add(info);
-            sp.Children.Add(btns);
-            border.Child = sp;
+            row.Children.Add(info);
+            row.Children.Add(btns);
+            border.Child = row;
             return border;
         }
 
         private void AppealBookFreeze(int bookId)
         {
-            var reason = Microsoft.VisualBasic.Interaction.InputBox(
+            string reason = Microsoft.VisualBasic.Interaction.InputBox(
                 "Причина оспаривания заморозки книги:", "Оспорить", "");
             if (string.IsNullOrWhiteSpace(reason)) return;
-            using (var conn = DatabaseHelper.GetConnection())
+
+            Core.DB.UnfreezeRequests.Add(new UnfreezeRequests
             {
-                conn.Open();
-                var cmd = new SqlCommand(
-                    "INSERT INTO UnfreezeRequests(UserID,BookID,Reason) VALUES(NULL,@bid,@r)", conn);
-                cmd.Parameters.AddWithValue("@bid", bookId);
-                cmd.Parameters.AddWithValue("@r", reason);
-                cmd.ExecuteNonQuery();
-            }
+                UserID = null,    // заявка на книгу — UserID пустой
+                BookID = bookId,
+                Reason = reason
+            });
+
+            Core.DB.SaveChanges();
+            Core.Reset();
             MessageBox.Show("Заявка отправлена.", "Готово");
         }
     }

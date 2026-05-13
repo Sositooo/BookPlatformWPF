@@ -10,37 +10,45 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Text="📋 Мои списки книг" FontSize="22" FontWeight="Bold" Margin="0,0,0,10"/>
+        <TextBlock Text="📋 Мои списки книг"
+                   FontSize="22" FontWeight="Bold" Margin="0,0,0,10"/>
 
-        <!-- Переключение вкладок -->
+        <!-- Вкладки разделов -->
         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
-            <Button Content="Читаю"      Tag="Читаю"      Click="BtnTab_Click" Padding="10,5" Margin="0,0,5,0"/>
-            <Button Content="Прочитано"  Tag="Прочитано"  Click="BtnTab_Click" Padding="10,5" Margin="0,0,5,0"/>
-            <Button Content="В планах"   Tag="В планах"   Click="BtnTab_Click" Padding="10,5" Margin="0,0,5,0"/>
-            <Button Content="Заброшено"  Tag="Заброшено"  Click="BtnTab_Click" Padding="10,5"/>
+            <Button Content="Читаю"     Tag="Читаю"     Click="BtnTab_Click"
+                    Padding="12,5" Margin="0,0,5,0"/>
+            <Button Content="Прочитано" Tag="Прочитано" Click="BtnTab_Click"
+                    Padding="12,5" Margin="0,0,5,0"/>
+            <Button Content="В планах"  Tag="В планах"  Click="BtnTab_Click"
+                    Padding="12,5" Margin="0,0,5,0"/>
+            <Button Content="Заброшено" Tag="Заброшено" Click="BtnTab_Click"
+                    Padding="12,5"/>
         </StackPanel>
 
-        <!-- Фильтры (те же что в каталоге) -->
+        <!-- Фильтры -->
         <Grid Grid.Row="2" Margin="0,0,0,10">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="150"/>
-                <ColumnDefinition Width="180"/>
+                <ColumnDefinition Width="155"/>
+                <ColumnDefinition Width="185"/>
             </Grid.ColumnDefinitions>
-            <TextBox x:Name="TxtSearch" PlaceholderText="Поиск..."
-                     Height="28" Padding="4" TextChanged="Filter_Changed"/>
-            <ComboBox x:Name="CmbSort" Grid.Column="1" Margin="5,0" Height="28"
+            <TextBox x:Name="TxtSearch"
+                     PlaceholderText="Поиск..."
+                     Height="28" Padding="4"
+                     TextChanged="Filter_Changed"/>
+            <ComboBox x:Name="CmbSort" Grid.Column="1"
+                      Margin="6,0" Height="28"
                       SelectionChanged="Filter_Changed">
                 <ComboBoxItem Content="По названию" IsSelected="True"/>
                 <ComboBoxItem Content="По рейтингу"/>
             </ComboBox>
-            <ComboBox x:Name="CmbGenre" Grid.Column="2" Height="28"
-                      DisplayMemberPath="Name" SelectedValuePath="GenreID"
+            <ComboBox x:Name="CmbGenre" Grid.Column="2"
+                      Height="28"
                       SelectionChanged="Filter_Changed"/>
         </Grid>
 
         <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
-            <WrapPanel x:Name="BooksPanel" Margin="0,5"/>
+            <WrapPanel x:Name="BooksPanel" Margin="0,4"/>
         </ScrollViewer>
     </Grid>
 </Page>

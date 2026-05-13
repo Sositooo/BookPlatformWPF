@@ -3,35 +3,48 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       Title="Книга">
     <ScrollViewer>
-        <StackPanel Margin="20" MaxWidth="700">
-            <TextBlock x:Name="TxtPageTitle" Text="Добавить книгу"
-                       FontSize="22" FontWeight="Bold" Margin="0,0,0,15"/>
+        <StackPanel Margin="20" MaxWidth="720">
+
+            <TextBlock x:Name="TxtPageTitle"
+                       Text="Добавить книгу"
+                       FontSize="22" FontWeight="Bold" Margin="0,0,0,18"/>
 
             <TextBlock Text="Название *"/>
-            <TextBox x:Name="TxtTitle" Height="30" Margin="0,4,0,10" Padding="4"/>
+            <TextBox x:Name="TxtTitle" Height="32"
+                     Margin="0,4,0,12" Padding="5"/>
 
             <TextBlock Text="Описание"/>
-            <TextBox x:Name="TxtDesc" Height="70" Margin="0,4,0,10"
-                     TextWrapping="Wrap" AcceptsReturn="True" Padding="4"/>
+            <TextBox x:Name="TxtDesc" Height="75"
+                     Margin="0,4,0,12"
+                     TextWrapping="Wrap" AcceptsReturn="True" Padding="5"/>
 
             <TextBlock Text="Текст книги"/>
-            <TextBox x:Name="TxtContent" Height="200" Margin="0,4,0,10"
+            <TextBox x:Name="TxtContent" Height="210"
+                     Margin="0,4,0,12"
                      TextWrapping="Wrap" AcceptsReturn="True"
-                     VerticalScrollBarVisibility="Auto" Padding="4"/>
+                     VerticalScrollBarVisibility="Auto" Padding="5"/>
 
-            <TextBlock Text="Жанры (выберите один или несколько):" Margin="0,0,0,5"/>
-            <ListBox x:Name="LstGenres" Height="100" SelectionMode="Multiple"
-                     DisplayMemberPath="Name" Margin="0,0,0,15"/>
+            <TextBlock Text="Жанры (выберите один или несколько):"
+                       Margin="0,0,0,5"/>
+            <ListBox x:Name="LstGenres"
+                     Height="110"
+                     SelectionMode="Multiple"
+                     DisplayMemberPath="Name"
+                     Margin="0,0,0,16"/>
 
-            <TextBlock x:Name="LblError" Foreground="Red" Margin="0,0,0,5"/>
+            <TextBlock x:Name="LblError"
+                       Foreground="Red" Margin="0,0,0,6"/>
 
             <StackPanel Orientation="Horizontal">
-                <Button Content="💾 Сохранить" Padding="12,6"
+                <Button Content="💾 Сохранить"
+                        Padding="14,6"
                         Background="#27AE60" Foreground="White"
                         Click="BtnSave_Click"/>
-                <Button Content="Отмена" Padding="12,6" Margin="8,0,0,0"
+                <Button Content="Отмена"
+                        Padding="14,6" Margin="8,0,0,0"
                         Click="BtnCancel_Click"/>
             </StackPanel>
+
         </StackPanel>
     </ScrollViewer>
 </Page>

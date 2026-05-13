@@ -8,16 +8,19 @@
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="65"/>
+            <!-- сайдбар -->
             <ColumnDefinition Width="*"/>
+            <!-- основная область -->
         </Grid.ColumnDefinitions>
 
-        <!-- САЙДБАР -->
+        <!-- ── САЙДБАР ── -->
         <Border Grid.Column="0" Background="#2C3E50">
             <StackPanel VerticalAlignment="Top" Margin="0,10">
 
-                <!-- Каталог -->
+                <!-- Каталог — открыт по умолчанию -->
                 <Button Style="{StaticResource SidebarBtn}"
-                        Click="BtnCatalog_Click" Foreground="White">
+                        Foreground="White"
+                        Click="BtnCatalog_Click">
                     <Button.ToolTip>
                         <ToolTip Content="Каталог книг"/>
                     </Button.ToolTip>
@@ -26,43 +29,55 @@
 
                 <!-- Списки книг -->
                 <Button Style="{StaticResource SidebarBtn}"
-                        Click="BtnLists_Click" Foreground="White">
+                        Foreground="White"
+                        Click="BtnLists_Click">
                     <Button.ToolTip>
                         <ToolTip Content="Списки книг"/>
                     </Button.ToolTip>
                     📋
                 </Button>
 
-                <!-- Страница автора (только для Автора) -->
-                <Button x:Name="BtnAuthorNav" Style="{StaticResource SidebarBtn}"
-                        Click="BtnAuthor_Click" Foreground="White" Visibility="Collapsed">
+                <!-- Страница автора — только для роли Автор -->
+                <Button x:Name="BtnAuthorNav"
+                        Style="{StaticResource SidebarBtn}"
+                        Foreground="White"
+                        Visibility="Collapsed"
+                        Click="BtnAuthor_Click">
                     <Button.ToolTip>
                         <ToolTip Content="Страница автора"/>
                     </Button.ToolTip>
                     ✍️
                 </Button>
 
-                <!-- Администрирование (только для Администратора) -->
-                <Button x:Name="BtnAdminNav" Style="{StaticResource SidebarBtn}"
-                        Click="BtnAdmin_Click" Foreground="White" Visibility="Collapsed">
+                <!-- Администрирование — только для роли Администратор -->
+                <Button x:Name="BtnAdminNav"
+                        Style="{StaticResource SidebarBtn}"
+                        Foreground="White"
+                        Visibility="Collapsed"
+                        Click="BtnAdmin_Click">
                     <Button.ToolTip>
                         <ToolTip Content="Администрирование"/>
                     </Button.ToolTip>
                     ⚙️
                 </Button>
 
-                <!-- Предупреждение заморозки (только если аккаунт заморожен) -->
-                <Button x:Name="BtnFreezeWarn" Style="{StaticResource SidebarBtn}"
-                        Click="BtnFreezeWarn_Click" Foreground="Orange" Visibility="Collapsed">
+                <!-- Предупреждение заморозки — только если аккаунт заморожен -->
+                <Button x:Name="BtnFreezeWarn"
+                        Style="{StaticResource SidebarBtn}"
+                        Foreground="Orange"
+                        Visibility="Collapsed"
+                        Click="BtnFreezeWarn_Click">
                     <Button.ToolTip>
                         <ToolTip Content="Аккаунт заморожен!"/>
                     </Button.ToolTip>
                     ⚠️
                 </Button>
 
-                <!-- Профиль (снизу) -->
+                <!-- Профиль — всегда виден, прижат вниз -->
                 <Button Style="{StaticResource SidebarBtn}"
-                        Click="BtnProfile_Click" Foreground="White" Margin="5,200,5,5">
+                        Foreground="White"
+                        Margin="5,180,5,5"
+                        Click="BtnProfile_Click">
                     <Button.ToolTip>
                         <ToolTip Content="Профиль"/>
                     </Button.ToolTip>
@@ -72,8 +87,10 @@
             </StackPanel>
         </Border>
 
-        <!-- ОСНОВНАЯ ОБЛАСТЬ -->
-        <Frame x:Name="MainFrame" Grid.Column="1"
+        <!-- ── ОСНОВНАЯ ОБЛАСТЬ ── -->
+        <Frame x:Name="MainFrame"
+               Grid.Column="1"
                NavigationUIVisibility="Hidden"/>
+
     </Grid>
 </Window>

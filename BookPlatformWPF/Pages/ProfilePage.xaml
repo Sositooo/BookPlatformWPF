@@ -5,42 +5,60 @@
     <ScrollViewer>
         <StackPanel Margin="20" MaxWidth="700">
 
-            <TextBlock Text="👤 Профиль" FontSize="22" FontWeight="Bold" Margin="0,0,0,15"/>
+            <TextBlock Text="👤 Профиль"
+                       FontSize="22" FontWeight="Bold" Margin="0,0,0,15"/>
 
-            <!-- Предупреждение заморозки -->
-            <Border x:Name="FreezeWarning" Visibility="Collapsed"
-                    Background="#FDECEA" BorderBrush="#E74C3C"
-                    BorderThickness="1" CornerRadius="4" Padding="12" Margin="0,0,0,15">
+            <!-- Блок предупреждения — виден только если аккаунт заморожен -->
+            <Border x:Name="FreezeWarning"
+                    Visibility="Collapsed"
+                    Background="#FDECEA"
+                    BorderBrush="#E74C3C"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="12"
+                    Margin="0,0,0,15">
                 <StackPanel>
-                    <TextBlock Text="⚠️ Ваш аккаунт заморожен" FontWeight="Bold"
-                               Foreground="#C0392B" FontSize="15"/>
-                    <TextBlock x:Name="TxtFreezeReason" Foreground="#C0392B"
-                               TextWrapping="Wrap" Margin="0,4"/>
-                    <Button Content="Оспорить заморозку" Margin="0,8,0,0"
-                            HorizontalAlignment="Left" Padding="10,5"
+                    <TextBlock Text="⚠️ Ваш аккаунт заморожен"
+                               FontWeight="Bold" Foreground="#C0392B" FontSize="15"/>
+                    <TextBlock x:Name="TxtFreezeReason"
+                               Foreground="#C0392B"
+                               TextWrapping="Wrap"
+                               Margin="0,5"/>
+                    <Button Content="Оспорить заморозку"
+                            HorizontalAlignment="Left"
+                            Padding="10,5" Margin="0,8,0,0"
                             Background="#E74C3C" Foreground="White"
                             Click="BtnAppealFreeze_Click"/>
                 </StackPanel>
             </Border>
 
-            <!-- Инфо о пользователе -->
-            <Border Background="White" BorderBrush="LightGray"
-                    BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,15">
+            <!-- Информация о пользователе -->
+            <Border Background="White"
+                    BorderBrush="LightGray"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    Padding="15"
+                    Margin="0,0,0,15">
                 <StackPanel>
                     <TextBlock x:Name="TxtName"  FontSize="16" FontWeight="Bold"/>
-                    <TextBlock x:Name="TxtLogin" Foreground="Gray" Margin="0,3"/>
-                    <TextBlock x:Name="TxtEmail" Foreground="Gray" Margin="0,3"/>
-                    <TextBlock x:Name="TxtRole"  Foreground="#4A90D9" Margin="0,3"/>
+                    <TextBlock x:Name="TxtLogin" Foreground="Gray" Margin="0,4"/>
+                    <TextBlock x:Name="TxtEmail" Foreground="Gray" Margin="0,4"/>
+                    <TextBlock x:Name="TxtRole"  Foreground="#4A90D9" Margin="0,4"/>
                 </StackPanel>
             </Border>
 
-            <!-- Заявка на роль Автора -->
-            <Button x:Name="BtnApplyAuthor" Content="📝 Подать заявку на роль Автора"
-                    HorizontalAlignment="Left" Padding="12,6" Margin="0,0,0,15"
+            <!-- Кнопка заявки на роль Автора — только для Читателей -->
+            <Button x:Name="BtnApplyAuthor"
+                    Content="📝 Подать заявку на роль Автора"
+                    HorizontalAlignment="Left"
+                    Padding="12,6" Margin="0,0,0,18"
                     Background="#27AE60" Foreground="White"
-                    Click="BtnApplyAuthor_Click" Visibility="Collapsed"/>
+                    Visibility="Collapsed"
+                    Click="BtnApplyAuthor_Click"/>
 
-            <TextBlock Text="Мои отзывы" FontSize="18" FontWeight="Bold" Margin="0,0,0,8"/>
+            <TextBlock Text="Мои отзывы"
+                       FontSize="18" FontWeight="Bold" Margin="0,0,0,8"/>
+
             <StackPanel x:Name="ReviewsPanel"/>
 
         </StackPanel>

@@ -1,5 +1,6 @@
 ﻿using System;
-using System.Data.SqlClient;
+using System.Data.Entity;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -19,393 +20,430 @@ namespace BookPlatformWPF.Pages
             LoadUsers();
         }
 
-        // === ЖАЛОБЫ ===
-        private void BtnRefreshComplaints_Click(object sender, RoutedEventArgs e) => LoadComplaints();
+        // ══════════════════════════════════════════════════════
+        // ЖАЛОБЫ
+        // ══════════════════════════════════════════════════════
+        private void BtnRefreshComplaints_Click(object sender, RoutedEventArgs e)
+            => LoadComplaints();
 
         private void LoadComplaints()
         {
             ComplaintsPanel.Children.Clear();
-            using (var conn = DatabaseHelper.GetConnection())
+
+            var list = Core.DB.Complaints
+                .Include(c => c.Users)   // кто пожаловался
+                .Include(c => c.Books)   // на какую книгу
+                .Include(c => c.Reviews) // или на какой отзыв
+                .OrderByDescending(c => c.ComplaintDate)
+                .ToList();
+
+            if (!list.Any())
             {
-                conn.Open();
-                string sql = @"
-                    SELECT c.ComplaintID, c.Reason, c.ComplaintDate,
-                           uc.DisplayName AS From_User,
-                           b.Title AS BookTitle, r.ReviewText
-                    FROM Complaints c
-                    JOIN Users uc ON c.UserID = uc.UserID
-                    LEFT JOIN Books b ON c.BookID = b.BookID
-                    LEFT JOIN Reviews r ON c.ReviewID = r.ReviewID
-                    ORDER BY c.ComplaintDate DESC";
-                var cmd = new SqlCommand(sql, conn);
-                using (var reader = cmd.ExecuteReader())
-                    while (reader.Read())
-                    {
-                        int cid = (int)reader["ComplaintID"];
-                        string target = reader["BookTitle"] != DBNull.Value
-                            ? "📚 Книга: " + reader["BookTitle"]
-                            : "💬 Отзыв: " + reader["ReviewText"]?.ToString()?[..Math.Min(50, reader["ReviewText"].ToString().Length)] + "...";
-                        ComplaintsPanel.Children.Add(
-                            CreateAdminRow(cid, $"от {reader["From_User"]}  |  {target}\n{reader["Reason"]}",
-                                () => DeleteComplaint(cid)));
-                    }
+                ComplaintsPanel.Children.Add(NoData("Жалоб нет."));
+                return;
+            }
+
+            foreach (var c in list)
+            {
+                // Формируем текст: на что жалоба
+                string target = c.Books != null
+                    ? "📚 Книга: " + c.Books.Title
+                    : "💬 Отзыв: " + Truncate(c.Reviews?.ReviewText, 60);
+
+                string info = $"От: {c.Users?.DisplayName ?? "—"}\n{target}\nПричина: {c.Reason}";
+                int cid = c.ComplaintID;
+
+                // У жалобы только кнопка "Отклонить" (закрыть жалобу)
+                ComplaintsPanel.Children.Add(
+                    MakeRow(info, onDecline: () => DeleteComplaint(cid)));
             }
         }
 
         private void DeleteComplaint(int id)
         {
-            using (var conn = DatabaseHelper.GetConnection())
-            {
-                conn.Open();
-                new SqlCommand($"DELETE FROM Complaints WHERE ComplaintID={id}", conn).ExecuteNonQuery();
-            }
+            var c = Core.DB.Complaints.Find(id);
+            if (c == null) return;
+            Core.DB.Complaints.Remove(c);
+            Core.DB.SaveChanges();
+            Core.Reset();
             LoadComplaints();
         }
 
-        // === ЗАЯВКИ НА РАЗМОРОЗКУ ===
-        private void BtnRefreshUnfreeze_Click(object sender, RoutedEventArgs e) => LoadUnfreezeRequests();
+        // ══════════════════════════════════════════════════════
+        // ЗАЯВКИ НА РАЗМОРОЗКУ
+        // ══════════════════════════════════════════════════════
+        private void BtnRefreshUnfreeze_Click(object sender, RoutedEventArgs e)
+            => LoadUnfreezeRequests();
 
         private void LoadUnfreezeRequests()
         {
             UnfreezePanel.Children.Clear();
-            using (var conn = DatabaseHelper.GetConnection())
+
+            var list = Core.DB.UnfreezeRequests
+                .Include(r => r.Users)
+                .Include(r => r.Books)
+                .OrderByDescending(r => r.RequestDate)
+                .ToList();
+
+            if (!list.Any())
             {
-                conn.Open();
-                string sql = @"
-                    SELECT ur.UnfreezeRequestID, ur.Reason, ur.RequestDate,
-                           u.DisplayName AS UserName, u.UserID,
-                           b.Title AS BookTitle, b.BookID
-                    FROM UnfreezeRequests ur
-                    LEFT JOIN Users u ON ur.UserID = u.UserID
-                    LEFT JOIN Books b ON ur.BookID = b.BookID
-                    ORDER BY ur.RequestDate DESC";
-                var cmd = new SqlCommand(sql, conn);
-                using (var reader = cmd.ExecuteReader())
-                    while (reader.Read())
-                    {
-                        int rid = (int)reader["UnfreezeRequestID"];
-                        int? uid = reader["UserID"] == DBNull.Value ? null : (int?)reader["UserID"];
-                        int? bid = reader["BookID"] == DBNull.Value ? null : (int?)reader["BookID"];
-                        string who = uid.HasValue
-                            ? "👤 Пользователь: " + reader["UserName"]
-                            : "📚 Книга: " + reader["BookTitle"];
-                        UnfreezePanel.Children.Add(CreateAdminRowWithApprove(
-                            rid, $"{who}\n{reader["Reason"]}",
-                            () => ApproveUnfreeze(rid, uid, bid),
-                            () => DeleteUnfreezeRequest(rid)));
-                    }
+                UnfreezePanel.Children.Add(NoData("Заявок на разморозку нет."));
+                return;
+            }
+
+            foreach (var req in list)
+            {
+                string who = req.Users != null
+                    ? "👤 Пользователь: " + req.Users.DisplayName
+                    : "📚 Книга: " + (req.Books?.Title ?? "—");
+
+                string info = $"{who}\nПричина: {req.Reason}";
+                int rid = req.UnfreezeRequestID;
+                int? uid = req.UserID;
+                int? bid = req.BookID;
+
+                UnfreezePanel.Children.Add(
+                    MakeRowWithApprove(
+                        info,
+                        onApprove: () => ApproveUnfreeze(rid, uid, bid),
+                        onDecline: () => DeleteUnfreezeReq(rid)
+                    ));
             }
         }
 
-        private void ApproveUnfreeze(int requestId, int? userId, int? bookId)
+        private void ApproveUnfreeze(int reqId, int? userId, int? bookId)
         {
-            using (var conn = DatabaseHelper.GetConnection())
+            if (userId.HasValue)
             {
-                conn.Open();
-                if (userId.HasValue)
-                    new SqlCommand($"UPDATE Users SET IsFrozen=0, FreezeReason=NULL WHERE UserID={userId}", conn).ExecuteNonQuery();
-                else if (bookId.HasValue)
-                    new SqlCommand($"UPDATE Books SET IsFrozen=0, FreezeReason=NULL WHERE BookID={bookId}", conn).ExecuteNonQuery();
-                new SqlCommand($"DELETE FROM UnfreezeRequests WHERE UnfreezeRequestID={requestId}", conn).ExecuteNonQuery();
+                var user = Core.DB.Users.Find(userId.Value);
+                if (user != null) { user.IsFrozen = false; user.FreezeReason = null; }
             }
+            else if (bookId.HasValue)
+            {
+                var book = Core.DB.Books.Find(bookId.Value);
+                if (book != null) { book.IsFrozen = false; book.FreezeReason = null; }
+            }
+
+            var req = Core.DB.UnfreezeRequests.Find(reqId);
+            if (req != null) Core.DB.UnfreezeRequests.Remove(req);
+
+            Core.DB.SaveChanges();
+            Core.Reset();
+
             MessageBox.Show("Заморозка снята.", "Готово");
             LoadUnfreezeRequests();
+            LoadFrozen(); // обновляем список замороженных
         }
 
-        private void DeleteUnfreezeRequest(int id)
+        private void DeleteUnfreezeReq(int id)
         {
-            using (var conn = DatabaseHelper.GetConnection())
-            {
-                conn.Open();
-                new SqlCommand($"DELETE FROM UnfreezeRequests WHERE UnfreezeRequestID={id}", conn).ExecuteNonQuery();
-            }
+            var req = Core.DB.UnfreezeRequests.Find(id);
+            if (req == null) return;
+            Core.DB.UnfreezeRequests.Remove(req);
+            Core.DB.SaveChanges();
+            Core.Reset();
             LoadUnfreezeRequests();
         }
 
-        // === ЗАЯВКИ НА РОЛЬ АВТОРА ===
-        private void BtnRefreshRoles_Click(object sender, RoutedEventArgs e) => LoadRoleRequests();
+        // ══════════════════════════════════════════════════════
+        // ЗАЯВКИ НА РОЛЬ АВТОРА
+        // ══════════════════════════════════════════════════════
+        private void BtnRefreshRoles_Click(object sender, RoutedEventArgs e)
+            => LoadRoleRequests();
 
         private void LoadRoleRequests()
         {
             RoleRequestsPanel.Children.Clear();
-            using (var conn = DatabaseHelper.GetConnection())
+
+            var list = Core.DB.RoleRequests
+                .Include(r => r.Users)
+                .OrderBy(r => r.RequestDate)
+                .ToList();
+
+            if (!list.Any())
             {
-                conn.Open();
-                string sql = @"SELECT rr.RequestID, rr.RequestDate, u.DisplayName, u.UserID
-                               FROM RoleRequests rr JOIN Users u ON rr.UserID = u.UserID
-                               ORDER BY rr.RequestDate";
-                var cmd = new SqlCommand(sql, conn);
-                using (var reader = cmd.ExecuteReader())
-                    while (reader.Read())
-                    {
-                        int reqId = (int)reader["RequestID"];
-                        int uid = (int)reader["UserID"];
-                        RoleRequestsPanel.Children.Add(CreateAdminRowWithApprove(
-                            reqId,
-                            $"👤 {reader["DisplayName"]}  ({((DateTime)reader["RequestDate"]):dd.MM.yyyy})",
-                            () => ApproveRoleRequest(reqId, uid),
-                            () => DeleteRoleRequest(reqId)));
-                    }
+                RoleRequestsPanel.Children.Add(NoData("Заявок нет."));
+                return;
+            }
+
+            foreach (var req in list)
+            {
+                string info = $"👤 {req.Users?.DisplayName ?? "—"}  " +
+                              $"({req.RequestDate:dd.MM.yyyy})";
+                int reqId = req.RequestID;
+                int uid = req.UserID;
+
+                RoleRequestsPanel.Children.Add(
+                    MakeRowWithApprove(
+                        info,
+                        onApprove: () => ApproveRole(reqId, uid),
+                        onDecline: () => DeleteRoleReq(reqId)
+                    ));
             }
         }
 
-        private void ApproveRoleRequest(int requestId, int userId)
+        private void ApproveRole(int reqId, int userId)
         {
-            using (var conn = DatabaseHelper.GetConnection())
-            {
-                conn.Open();
-                new SqlCommand($"UPDATE Users SET RoleID=2 WHERE UserID={userId}", conn).ExecuteNonQuery();
-                new SqlCommand($"DELETE FROM RoleRequests WHERE RequestID={requestId}", conn).ExecuteNonQuery();
-            }
-            MessageBox.Show("Пользователю назначена роль Автора.", "Готово");
+            // Повышаем пользователя до Автора
+            var user = Core.DB.Users.Find(userId);
+            if (user != null) user.RoleID = 2;
+
+            var req = Core.DB.RoleRequests.Find(reqId);
+            if (req != null) Core.DB.RoleRequests.Remove(req);
+
+            Core.DB.SaveChanges();
+            Core.Reset();
+
+            MessageBox.Show("Роль Автора назначена.", "Готово");
             LoadRoleRequests();
         }
 
-        private void DeleteRoleRequest(int id)
+        private void DeleteRoleReq(int id)
         {
-            using (var conn = DatabaseHelper.GetConnection())
-            {
-                conn.Open();
-                new SqlCommand($"DELETE FROM RoleRequests WHERE RequestID={id}", conn).ExecuteNonQuery();
-            }
+            var req = Core.DB.RoleRequests.Find(id);
+            if (req == null) return;
+            Core.DB.RoleRequests.Remove(req);
+            Core.DB.SaveChanges();
+            Core.Reset();
             LoadRoleRequests();
         }
 
-        // === ЗАМОРОЖЕННЫЕ ===
+        // ══════════════════════════════════════════════════════
+        // ЗАМОРОЖЕННЫЕ — просмотр списка
+        // ══════════════════════════════════════════════════════
         private void LoadFrozen()
         {
             FrozenPanel.Children.Clear();
-            using (var conn = DatabaseHelper.GetConnection())
-            {
-                conn.Open();
-                // Замороженные книги
-                FrozenPanel.Children.Add(new TextBlock
-                {
-                    Text = "📚 Замороженные книги",
-                    FontWeight = FontWeights.Bold,
-                    FontSize = 15,
-                    Margin = new Thickness(0, 0, 0, 5)
-                });
-                var cmd = new SqlCommand("SELECT BookID, Title, FreezeReason FROM Books WHERE IsFrozen=1", conn);
-                using (var r = cmd.ExecuteReader())
-                    while (r.Read())
-                    {
-                        int bid = (int)r["BookID"];
-                        FrozenPanel.Children.Add(new TextBlock
-                        {
-                            Text = $"• {r["Title"]}  —  {r["FreezeReason"]}",
-                            TextWrapping = TextWrapping.Wrap,
-                            Margin = new Thickness(0, 2, 0, 2)
-                        });
-                    }
 
-                // Замороженные пользователи
-                FrozenPanel.Children.Add(new TextBlock
-                {
-                    Text = "👤 Замороженные пользователи",
-                    FontWeight = FontWeights.Bold,
-                    FontSize = 15,
-                    Margin = new Thickness(0, 10, 0, 5)
-                });
-                var cmd2 = new SqlCommand("SELECT UserID, DisplayName, Login, FreezeReason FROM Users WHERE IsFrozen=1", conn);
-                using (var r = cmd2.ExecuteReader())
-                    while (r.Read())
-                        FrozenPanel.Children.Add(new TextBlock
-                        {
-                            Text = $"• {r["DisplayName"]} ({r["Login"]})  —  {r["FreezeReason"]}",
-                            TextWrapping = TextWrapping.Wrap,
-                            Margin = new Thickness(0, 2, 0, 2)
-                        });
-            }
+            // Замороженные книги
+            FrozenPanel.Children.Add(SectionHeader("📚 Замороженные книги"));
+            var books = Core.DB.Books.Where(b => b.IsFrozen).OrderBy(b => b.Title).ToList();
+            if (!books.Any())
+                FrozenPanel.Children.Add(NoData("Нет замороженных книг."));
+            else
+                foreach (var b in books)
+                    FrozenPanel.Children.Add(new TextBlock
+                    {
+                        Text = $"• {b.Title}  —  {b.FreezeReason ?? "без причины"}",
+                        TextWrapping = TextWrapping.Wrap,
+                        Margin = new Thickness(0, 2)
+                    });
+
+            // Замороженные пользователи
+            FrozenPanel.Children.Add(SectionHeader("👤 Замороженные пользователи"));
+            var users = Core.DB.Users.Where(u => u.IsFrozen).OrderBy(u => u.DisplayName).ToList();
+            if (!users.Any())
+                FrozenPanel.Children.Add(NoData("Нет замороженных пользователей."));
+            else
+                foreach (var u in users)
+                    FrozenPanel.Children.Add(new TextBlock
+                    {
+                        Text = $"• {u.DisplayName} ({u.Login})  —  {u.FreezeReason ?? "без причины"}",
+                        TextWrapping = TextWrapping.Wrap,
+                        Margin = new Thickness(0, 2)
+                    });
         }
 
-        // === ПОЛЬЗОВАТЕЛИ ===
-        private void BtnRefreshUsers_Click(object sender, RoutedEventArgs e) => LoadUsers();
+        // ══════════════════════════════════════════════════════
+        // ПОЛЬЗОВАТЕЛИ
+        // ══════════════════════════════════════════════════════
+        private void BtnRefreshUsers_Click(object sender, RoutedEventArgs e)
+            => LoadUsers();
 
         private void LoadUsers()
         {
             UsersPanel.Children.Clear();
-            using (var conn = DatabaseHelper.GetConnection())
-            {
-                conn.Open();
-                string sql = @"SELECT u.UserID, u.Login, u.DisplayName, u.IsFrozen,
-                                      r.RoleName, u.RoleID
-                               FROM Users u JOIN Roles r ON u.RoleID = r.RoleID
-                               ORDER BY u.DisplayName";
-                var cmd = new SqlCommand(sql, conn);
-                using (var reader = cmd.ExecuteReader())
-                    while (reader.Read())
-                    {
-                        int uid = (int)reader["UserID"];
-                        bool frozen = (bool)reader["IsFrozen"];
-                        int roleId = (int)reader["RoleID"];
-                        string name = reader["DisplayName"].ToString();
-                        string login = reader["Login"].ToString();
-                        string role = reader["RoleName"].ToString();
-                        UsersPanel.Children.Add(CreateUserRow(uid, name, login, role, roleId, frozen));
-                    }
-            }
+
+            var users = Core.DB.Users
+                .Include(u => u.Roles) // нужен RoleName
+                .OrderBy(u => u.DisplayName)
+                .ToList();
+
+            foreach (var user in users)
+                UsersPanel.Children.Add(CreateUserRow(user));
         }
 
-        private Border CreateUserRow(int uid, string name, string login, string role, int roleId, bool frozen)
+        private Border CreateUserRow(Users user)
         {
             var border = new Border
             {
-                Background = frozen ? new SolidColorBrush(Color.FromRgb(253, 234, 234)) : Brushes.White,
+                Background = user.IsFrozen
+                    ? new SolidColorBrush(Color.FromRgb(253, 234, 234))
+                    : Brushes.White,
                 BorderBrush = Brushes.LightGray,
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(4),
-                Padding = new Thickness(10),
+                Padding = new Thickness(12),
                 Margin = new Thickness(0, 3, 0, 0)
             };
-            var sp = new StackPanel { Orientation = Orientation.Horizontal };
-            var info = new StackPanel { VerticalAlignment = VerticalAlignment.Center, MinWidth = 250 };
-            info.Children.Add(new TextBlock { Text = $"{name} ({login})", FontWeight = FontWeights.Bold });
-            info.Children.Add(new TextBlock { Text = "Роль: " + role, FontSize = 12, Foreground = Brushes.Gray });
 
-            var btns = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(10, 0, 0, 0) };
+            var row = new StackPanel { Orientation = Orientation.Horizontal };
+            var info = new StackPanel
+            {
+                VerticalAlignment = VerticalAlignment.Center,
+                MinWidth = 220
+            };
+            info.Children.Add(new TextBlock
+            {
+                Text = $"{user.DisplayName} ({user.Login})",
+                FontWeight = FontWeights.Bold
+            });
+            info.Children.Add(new TextBlock
+            {
+                Text = "Роль: " + (user.Roles?.RoleName ?? "—"),
+                Foreground = Brushes.Gray,
+                FontSize = 12
+            });
+
+            var btns = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(12, 0, 0, 0)
+            };
 
             // Смена роли
-            var cmbRole = new ComboBox { Width = 120 };
+            var cmbRole = new ComboBox { Width = 135 };
             cmbRole.Items.Add(new ComboBoxItem { Content = "Читатель", Tag = 1 });
             cmbRole.Items.Add(new ComboBoxItem { Content = "Автор", Tag = 2 });
             cmbRole.Items.Add(new ComboBoxItem { Content = "Администратор", Tag = 3 });
-            cmbRole.SelectedIndex = roleId - 1;
-            var btnRole = new Button { Content = "Сменить роль", Padding = new Thickness(6, 3, 6, 3), Margin = new Thickness(4, 0, 0, 0) };
+            cmbRole.SelectedIndex = user.RoleID - 1;
+
+            int uid = user.UserID;
+            var btnRole = new Button
+            {
+                Content = "Сменить роль",
+                Padding = new Thickness(7, 3, 7, 3),
+                Margin = new Thickness(4, 0, 0, 0)
+            };
             btnRole.Click += (s, e) =>
             {
                 int newRole = (int)((ComboBoxItem)cmbRole.SelectedItem).Tag;
-                using (var conn = DatabaseHelper.GetConnection())
-                {
-                    conn.Open();
-                    new SqlCommand($"UPDATE Users SET RoleID={newRole} WHERE UserID={uid}", conn).ExecuteNonQuery();
-                }
+                var u = Core.DB.Users.Find(uid);
+                if (u == null) return;
+                u.RoleID = newRole;
+                Core.DB.SaveChanges();
+                Core.Reset();
                 LoadUsers();
             };
 
-            // Сменить пароль
-            var btnPwd = new Button { Content = "Сменить пароль", Padding = new Thickness(6, 3, 6, 3), Margin = new Thickness(4, 0, 0, 0) };
+            // Смена пароля
+            var btnPwd = new Button
+            {
+                Content = "Пароль",
+                Padding = new Thickness(7, 3, 7, 3),
+                Margin = new Thickness(4, 0, 0, 0)
+            };
             btnPwd.Click += (s, e) =>
             {
-                string newPwd = Microsoft.VisualBasic.Interaction.InputBox("Новый пароль:", "Смена пароля", "");
-                if (string.IsNullOrWhiteSpace(newPwd)) return;
-                using (var conn = DatabaseHelper.GetConnection())
-                {
-                    conn.Open();
-                    var cmd = new SqlCommand("UPDATE Users SET Password=@p WHERE UserID=@uid", conn);
-                    cmd.Parameters.AddWithValue("@p", newPwd);
-                    cmd.Parameters.AddWithValue("@uid", uid);
-                    cmd.ExecuteNonQuery();
-                }
+                string pwd = Microsoft.VisualBasic.Interaction.InputBox(
+                    "Новый пароль:", "Смена пароля", "");
+                if (string.IsNullOrWhiteSpace(pwd)) return;
+                var u = Core.DB.Users.Find(uid);
+                if (u == null) return;
+                u.Password = pwd;
+                Core.DB.SaveChanges();
+                Core.Reset();
                 MessageBox.Show("Пароль изменён.", "Готово");
             };
 
-            // Заморозить/разморозить
+            // Заморозить / Разморозить
+            bool frozen = user.IsFrozen;
             var btnFreeze = new Button
             {
                 Content = frozen ? "✅ Разморозить" : "❄️ Заморозить",
-                Padding = new Thickness(6, 3, 6, 3),
+                Padding = new Thickness(7, 3, 7, 3),
                 Margin = new Thickness(4, 0, 0, 0),
-                Background = frozen ? new SolidColorBrush(Color.FromRgb(39, 174, 96))
-                                    : new SolidColorBrush(Color.FromRgb(231, 76, 60)),
+                BorderThickness = new Thickness(0),
                 Foreground = Brushes.White,
-                BorderThickness = new Thickness(0)
+                Background = frozen
+                    ? new SolidColorBrush(Color.FromRgb(39, 174, 96))
+                    : new SolidColorBrush(Color.FromRgb(231, 76, 60))
             };
             btnFreeze.Click += (s, e) =>
             {
-                if (frozen)
+                var u = Core.DB.Users.Find(uid);
+                if (u == null) return;
+
+                if (u.IsFrozen)
                 {
-                    using (var conn = DatabaseHelper.GetConnection())
-                    {
-                        conn.Open();
-                        new SqlCommand($"UPDATE Users SET IsFrozen=0,FreezeReason=NULL WHERE UserID={uid}", conn).ExecuteNonQuery();
-                    }
+                    u.IsFrozen = false;
+                    u.FreezeReason = null;
+                    Core.DB.SaveChanges();
+                    Core.Reset();
                 }
                 else
                 {
-                    string r = Microsoft.VisualBasic.Interaction.InputBox("Причина заморозки:", "Заморозка", "");
-                    if (string.IsNullOrWhiteSpace(r)) return;
-                    using (var conn = DatabaseHelper.GetConnection())
-                    {
-                        conn.Open();
-                        var cmd = new SqlCommand("UPDATE Users SET IsFrozen=1,FreezeReason=@r WHERE UserID=@uid", conn);
-                        cmd.Parameters.AddWithValue("@r", r);
-                        cmd.Parameters.AddWithValue("@uid", uid);
-                        cmd.ExecuteNonQuery();
-                    }
+                    string reason = Microsoft.VisualBasic.Interaction.InputBox(
+                        "Причина заморозки:", "Заморозка", "");
+                    if (string.IsNullOrWhiteSpace(reason)) return;
+                    u.IsFrozen = true;
+                    u.FreezeReason = reason;
+                    Core.DB.SaveChanges();
+                    Core.Reset();
                 }
                 LoadUsers();
+                LoadFrozen(); // обновляем вкладку замороженных
             };
 
             btns.Children.Add(cmbRole);
             btns.Children.Add(btnRole);
             btns.Children.Add(btnPwd);
             btns.Children.Add(btnFreeze);
-            sp.Children.Add(info);
-            sp.Children.Add(btns);
-            border.Child = sp;
+
+            row.Children.Add(info);
+            row.Children.Add(btns);
+            border.Child = row;
             return border;
         }
 
-        // === ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ===
+        // ══════════════════════════════════════════════════════
+        // ВСПОМОГАТЕЛЬНЫЕ — строки списков
+        // ══════════════════════════════════════════════════════
 
-        // Карточка с кнопкой "Отклонить" (для жалоб)
-        private Border CreateAdminRow(int id, string text, Action onDecline)
+        // Строка только с кнопкой "Отклонить" (жалобы)
+        private Border MakeRow(string text, Action onDecline)
         {
-            var border = new Border
-            {
-                Background = Brushes.White,
-                BorderBrush = Brushes.LightGray,
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(4),
-                Padding = new Thickness(10),
-                Margin = new Thickness(0, 3, 0, 0)
-            };
+            var border = MakeBorder();
             var sp = new StackPanel { Orientation = Orientation.Horizontal };
-            var info = new TextBlock
+
+            sp.Children.Add(new TextBlock
             {
                 Text = text,
                 TextWrapping = TextWrapping.Wrap,
-                VerticalAlignment = VerticalAlignment.Center,
-                MaxWidth = 550
-            };
-            var btnDecline = new Button
+                MaxWidth = 560,
+                VerticalAlignment = VerticalAlignment.Center
+            });
+
+            var btn = new Button
             {
                 Content = "✖ Отклонить",
                 Padding = new Thickness(8, 4, 8, 4),
                 Margin = new Thickness(10, 0, 0, 0),
-                Background = Brushes.LightGray,
                 VerticalAlignment = VerticalAlignment.Center
             };
-            btnDecline.Click += (s, e) => onDecline();
-            sp.Children.Add(info);
-            sp.Children.Add(btnDecline);
+            btn.Click += (s, e) => onDecline();
+            sp.Children.Add(btn);
+
             border.Child = sp;
             return border;
         }
 
-        // Карточка с кнопками "Принять" и "Отклонить"
-        private Border CreateAdminRowWithApprove(int id, string text, Action onApprove, Action onDecline)
+        // Строка с кнопками "Принять" и "Отклонить" (заявки)
+        private Border MakeRowWithApprove(string text, Action onApprove, Action onDecline)
         {
-            var border = new Border
-            {
-                Background = Brushes.White,
-                BorderBrush = Brushes.LightGray,
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(4),
-                Padding = new Thickness(10),
-                Margin = new Thickness(0, 3, 0, 0)
-            };
+            var border = MakeBorder();
             var sp = new StackPanel { Orientation = Orientation.Horizontal };
-            var info = new TextBlock
+
+            sp.Children.Add(new TextBlock
             {
                 Text = text,
                 TextWrapping = TextWrapping.Wrap,
-                VerticalAlignment = VerticalAlignment.Center,
-                MaxWidth = 500
-            };
+                MaxWidth = 500,
+                VerticalAlignment = VerticalAlignment.Center
+            });
 
-            var btnApprove = new Button
+            var btnOk = new Button
             {
                 Content = "✔ Принять",
                 Padding = new Thickness(8, 4, 8, 4),
@@ -415,9 +453,9 @@ namespace BookPlatformWPF.Pages
                 BorderThickness = new Thickness(0),
                 VerticalAlignment = VerticalAlignment.Center
             };
-            btnApprove.Click += (s, e) => onApprove();
+            btnOk.Click += (s, e) => onApprove();
 
-            var btnDecline = new Button
+            var btnNo = new Button
             {
                 Content = "✖ Отклонить",
                 Padding = new Thickness(8, 4, 8, 4),
@@ -426,13 +464,41 @@ namespace BookPlatformWPF.Pages
                 BorderThickness = new Thickness(0),
                 VerticalAlignment = VerticalAlignment.Center
             };
-            btnDecline.Click += (s, e) => onDecline();
+            btnNo.Click += (s, e) => onDecline();
 
-            sp.Children.Add(info);
-            sp.Children.Add(btnApprove);
-            sp.Children.Add(btnDecline);
+            sp.Children.Add(btnOk);
+            sp.Children.Add(btnNo);
             border.Child = sp;
             return border;
         }
+
+        private Border MakeBorder() => new Border
+        {
+            Background = Brushes.White,
+            BorderBrush = Brushes.LightGray,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(4),
+            Padding = new Thickness(10),
+            Margin = new Thickness(0, 3, 0, 0)
+        };
+
+        private TextBlock SectionHeader(string text) => new TextBlock
+        {
+            Text = text,
+            FontWeight = FontWeights.Bold,
+            FontSize = 15,
+            Margin = new Thickness(0, 10, 0, 5)
+        };
+
+        private TextBlock NoData(string text) => new TextBlock
+        {
+            Text = text,
+            Foreground = Brushes.Gray,
+            Margin = new Thickness(0, 3)
+        };
+
+        // Обрезаем длинный текст для превью
+        private string Truncate(string s, int max) =>
+            s == null ? "—" : s.Length > max ? s.Substring(0, max) + "…" : s;
     }
 }
