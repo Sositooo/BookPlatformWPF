@@ -25,52 +25,23 @@
                     Padding="12,5"/>
         </StackPanel>
 
-        <!-- Фильтры -->
-        <Grid Grid.Row="2" Margin="0,0,0,10">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="155"/>
-                <ColumnDefinition Width="185"/>
-            </Grid.ColumnDefinitions>
+        <!-- Фильтры — Grid.Row="2" -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10">
 
-            <!-- Поиск с плейсхолдером -->
-            <Grid Grid.Column="0">
-                <TextBox x:Name="TxtSearch"
-                 Height="28" Padding="4"
-                 TextChanged="Filter_Changed"/>
-                <TextBlock Text="Поиск..."
-                   Foreground="Gray" Padding="6,5"
-                   IsHitTestVisible="False">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding Text, ElementName=TxtSearch}"
-                                     Value="">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
-            </Grid>
-
-            <ComboBox x:Name="CmbSort" Grid.Column="1"
-              Margin="6,0" Height="28"
+            <ComboBox x:Name="CmbSort" Width="155" Height="28"
+              Margin="0,0,6,0"
               SelectionChanged="Filter_Changed">
                 <ComboBoxItem Content="По названию" IsSelected="True"/>
                 <ComboBoxItem Content="По рейтингу"/>
             </ComboBox>
 
-            <ComboBox x:Name="CmbGenre" Grid.Column="2"
-              Height="28"
+            <ComboBox x:Name="CmbGenre" Width="185" Height="28"
               SelectionChanged="Filter_Changed"/>
 
+        </StackPanel>
 
-            <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
-                <WrapPanel x:Name="BooksPanel" Margin="0,4"/>
-            </ScrollViewer>
-
-        </Grid>
+        <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
+            <WrapPanel x:Name="BooksPanel" Margin="0,4"/>
+        </ScrollViewer>
     </Grid>
 </Page>

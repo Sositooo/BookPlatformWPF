@@ -22,7 +22,7 @@ namespace BookPlatformWPF.Helpers
             }
         }
 
-        // Пересоздать контекст (вызывай если данные не обновляются)
+        // Пересоздать контекст 
         public static void Reset()
         {
             _context?.Dispose();

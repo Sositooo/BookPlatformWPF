@@ -20,9 +20,9 @@ namespace BookPlatformWPF.Pages
             LoadUsers();
         }
 
-        // ══════════════════════════════════════════════════════
+        
         // ЖАЛОБЫ
-        // ══════════════════════════════════════════════════════
+        
         private void BtnRefreshComplaints_Click(object sender, RoutedEventArgs e)
             => LoadComplaints();
 
@@ -53,7 +53,7 @@ namespace BookPlatformWPF.Pages
                 string info = $"От: {c.Users?.DisplayName ?? "—"}\n{target}\nПричина: {c.Reason}";
                 int cid     = c.ComplaintID;
 
-                // У жалобы только кнопка "Отклонить" (закрыть жалобу)
+                // У жалобы только кнопка "Отклонить" 
                 ComplaintsPanel.Children.Add(
                     MakeRow(info, onDecline: () => DeleteComplaint(cid)));
             }
@@ -69,9 +69,9 @@ namespace BookPlatformWPF.Pages
             LoadComplaints();
         }
 
-        // ══════════════════════════════════════════════════════
+       
         // ЗАЯВКИ НА РАЗМОРОЗКУ
-        // ══════════════════════════════════════════════════════
+        
         private void BtnRefreshUnfreeze_Click(object sender, RoutedEventArgs e)
             => LoadUnfreezeRequests();
 
@@ -145,9 +145,9 @@ namespace BookPlatformWPF.Pages
             LoadUnfreezeRequests();
         }
 
-        // ══════════════════════════════════════════════════════
+
         // ЗАЯВКИ НА РОЛЬ АВТОРА
-        // ══════════════════════════════════════════════════════
+        
         private void BtnRefreshRoles_Click(object sender, RoutedEventArgs e)
             => LoadRoleRequests();
 
@@ -208,9 +208,9 @@ namespace BookPlatformWPF.Pages
             LoadRoleRequests();
         }
 
-        // ══════════════════════════════════════════════════════
+      
         // ЗАМОРОЖЕННЫЕ — просмотр списка
-        // ══════════════════════════════════════════════════════
+       
         private void LoadFrozen()
         {
             FrozenPanel.Children.Clear();
@@ -244,9 +244,9 @@ namespace BookPlatformWPF.Pages
                     });
         }
 
-        // ══════════════════════════════════════════════════════
+        
         // ПОЛЬЗОВАТЕЛИ
-        // ══════════════════════════════════════════════════════
+        
         private void BtnRefreshUsers_Click(object sender, RoutedEventArgs e)
             => LoadUsers();
 
@@ -396,9 +396,8 @@ namespace BookPlatformWPF.Pages
             return border;
         }
 
-        // ══════════════════════════════════════════════════════
         // ВСПОМОГАТЕЛЬНЫЕ — строки списков
-        // ══════════════════════════════════════════════════════
+        
 
         // Строка только с кнопкой "Отклонить" (жалобы)
         private Border MakeRow(string text, Action onDecline)

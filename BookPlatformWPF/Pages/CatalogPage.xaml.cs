@@ -102,7 +102,7 @@ namespace BookPlatformWPF.Pages
 
             var sp = new StackPanel();
 
-            // ── ОБЛОЖКА ──────────────────────────────────────────
+            // ОБЛОЖКА
             var coverBorder = new Border
             {
                 Height = 110,
@@ -145,7 +145,7 @@ namespace BookPlatformWPF.Pages
 
             sp.Children.Add(coverBorder);
 
-            // ── ТЕКСТ ──────────────────────────────────────────
+            //  ТЕКСТ
             var info = new StackPanel { Margin = new Thickness(8, 6, 8, 4) };
 
             info.Children.Add(new TextBlock
@@ -185,7 +185,7 @@ namespace BookPlatformWPF.Pages
             info.Children.Add(ratingRow);
             sp.Children.Add(info);
 
-            // ── КНОПКИ ─────────────────────────────────────────
+            //  КНОПКИ 
             var btnPanel = new StackPanel
             {
                 Orientation = Orientation.Horizontal,

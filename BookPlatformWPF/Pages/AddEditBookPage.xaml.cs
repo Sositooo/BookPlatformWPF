@@ -60,14 +60,14 @@ namespace BookPlatformWPF.Pages
 
             if (_bookId.HasValue)
             {
-                // ── РЕЖИМ РЕДАКТИРОВАНИЯ ──────────────────────────
+                // РЕЖИМ РЕДАКТИРОВАНИЯ 
                 // _book уже загружен — просто меняем поля
                 _book.Title = TxtTitle.Text.Trim();
                 _book.Description = TxtDesc.Text.Trim();
                 _book.Content = TxtContent.Text.Trim();
 
                 // Очищаем старые жанры и добавляем выбранные
-                // _book.Genres — это навигационная коллекция EF (Many-to-Many через BookGenres)
+                // _book.Genres — это навигационная коллекция EF 
                 _book.Genres.Clear();
                 foreach (Genres g in LstGenres.SelectedItems)
                 {
@@ -79,7 +79,7 @@ namespace BookPlatformWPF.Pages
             }
             else
             {
-                // ── РЕЖИМ ДОБАВЛЕНИЯ ─────────────────────────────
+                // РЕЖИМ ДОБАВЛЕНИЯ 
                 var newBook = new Books
                 {
                     Title = TxtTitle.Text.Trim(),

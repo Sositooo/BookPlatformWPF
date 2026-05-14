@@ -63,18 +63,17 @@ namespace BookPlatformWPF.Pages
 
         private void ApplyFilters()
         {
-            if (!_isLoaded) return;       
+            if (!_isLoaded) return;
             if (BooksPanel == null) return;
 
-            string search = TxtSearch?.Text?.ToLower() ?? "";
+            
+
             int genreID = 0;
             if (CmbGenre?.SelectedValue != null)
                 int.TryParse(CmbGenre.SelectedValue.ToString(), out genreID);
 
             IEnumerable<ReadingLists> filtered = _items.Where(rl =>
-                (string.IsNullOrEmpty(search) ||
-                 rl.Books.Title.ToLower().Contains(search) ||
-                 rl.Books.Users.DisplayName.ToLower().Contains(search)) &&
+                rl.Books != null &&
                 (genreID == 0 || rl.Books.Genres.Any(g => g.GenreID == genreID))
             );
 

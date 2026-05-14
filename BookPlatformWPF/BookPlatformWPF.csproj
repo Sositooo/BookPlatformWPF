@@ -73,7 +73,6 @@
       <DependentUpon>Model1.tt</DependentUpon>
     </Compile>
     <Compile Include="Helpers\Core.cs" />
-    <Compile Include="Helpers\DatabaseHelper.cs" />
     <Compile Include="Helpers\SessionManager.cs" />
     <Compile Include="LoginWindow.xaml.cs">
       <DependentUpon>LoginWindow.xaml</DependentUpon>
