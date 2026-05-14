@@ -30,6 +30,7 @@ namespace BookPlatformWPF
         public int AuthorID { get; set; }
         public bool IsFrozen { get; set; }
         public string FreezeReason { get; set; }
+        public string CoverPath { get; set; }
     
         public virtual Users Users { get; set; }
         public virtual ICollection<Complaints> Complaints { get; set; }

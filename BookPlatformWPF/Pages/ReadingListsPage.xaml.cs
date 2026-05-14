@@ -10,6 +10,7 @@ namespace BookPlatformWPF.Pages
 {
     public partial class ReadingListsPage : Page
     {
+        private bool _isLoaded = false;
         private string _section = "Читаю";
         private List<ReadingLists> _items = new List<ReadingLists>();
 
@@ -18,6 +19,7 @@ namespace BookPlatformWPF.Pages
             InitializeComponent();
             LoadGenres();
             LoadBooks();
+            _isLoaded = true;
         }
 
         private void LoadGenres()
@@ -61,6 +63,9 @@ namespace BookPlatformWPF.Pages
 
         private void ApplyFilters()
         {
+            if (!_isLoaded) return;       
+            if (BooksPanel == null) return;
+
             string search = TxtSearch?.Text?.ToLower() ?? "";
             int genreID = 0;
             if (CmbGenre?.SelectedValue != null)

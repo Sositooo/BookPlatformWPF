@@ -93,8 +93,9 @@ namespace BookPlatformWPF.Pages
                 UserID = SessionManager.UserID,
                 BookID = _bookId,
                 ReviewText = TxtReview.Text.Trim(),
-                Rating = rating
-                // ReviewDate ставится через DEFAULT GETDATE() в БД
+                Rating = rating,
+                ReviewDate = System.DateTime.Now
+                
             });
 
             Core.DB.SaveChanges();
@@ -265,7 +266,8 @@ namespace BookPlatformWPF.Pages
                     UserID = SessionManager.UserID,
                     BookID = bookId,   // null если жалоба на отзыв
                     ReviewID = reviewId, // null если жалоба на книгу
-                    Reason = txt.Text.Trim()
+                    Reason = txt.Text.Trim(),
+                    ComplaintDate = System.DateTime.Now
                 });
 
                 Core.DB.SaveChanges();

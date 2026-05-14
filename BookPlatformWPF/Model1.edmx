@@ -4,7 +4,7 @@
   <edmx:Runtime>
     <!-- SSDL content -->
     <edmx:StorageModels>
-      <Schema Namespace="Хранилище BookPlatformModel" Provider="System.Data.SqlClient" ProviderManifestToken="2008" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
+    <Schema Namespace="Хранилище BookPlatformModel" Provider="System.Data.SqlClient" ProviderManifestToken="2008" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
         <EntityType Name="BookGenres">
           <Key>
             <PropertyRef Name="BookID" />
@@ -24,6 +24,7 @@
           <Property Name="AuthorID" Type="int" Nullable="false" />
           <Property Name="IsFrozen" Type="bit" Nullable="false" />
           <Property Name="FreezeReason" Type="nvarchar(max)" />
+          <Property Name="CoverPath" Type="nvarchar" MaxLength="500" />
         </EntityType>
         <EntityType Name="Complaints">
           <Key>
@@ -338,8 +339,7 @@
             <End Role="Users" EntitySet="Users" />
           </AssociationSet>
         </EntityContainer>
-      </Schema>
-    </edmx:StorageModels>
+      </Schema></edmx:StorageModels>
     <!-- CSDL content -->
     <edmx:ConceptualModels>
       <Schema Namespace="BookPlatformModel" Alias="Self" annotation:UseStrongSpatialTypes="false" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm">
@@ -360,6 +360,7 @@
           <NavigationProperty Name="Reviews" Relationship="Self.FK__Reviews__BookID__5AEE82B9" FromRole="Books" ToRole="Reviews" />
           <NavigationProperty Name="UnfreezeRequests" Relationship="Self.FK__UnfreezeR__BookI__5DCAEF64" FromRole="Books" ToRole="UnfreezeRequests" />
           <NavigationProperty Name="Genres" Relationship="Self.BookGenres" FromRole="Books" ToRole="Genres" />
+          <Property Name="CoverPath" Type="String" MaxLength="500" FixedLength="false" Unicode="true" />
         </EntityType>
         <EntityType Name="Complaints">
           <Key>
@@ -678,6 +679,7 @@
           <EntitySetMapping Name="Books">
             <EntityTypeMapping TypeName="BookPlatformModel.Books">
               <MappingFragment StoreEntitySet="Books">
+                <ScalarProperty Name="CoverPath" ColumnName="CoverPath" />
                 <ScalarProperty Name="BookID" ColumnName="BookID" />
                 <ScalarProperty Name="Title" ColumnName="Title" />
                 <ScalarProperty Name="Description" ColumnName="Description" />

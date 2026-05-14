@@ -102,18 +102,50 @@ namespace BookPlatformWPF.Pages
 
             var sp = new StackPanel();
 
-            // ── ОБЛОЖКА — цветной градиент + инициалы ──
+            // ── ОБЛОЖКА ──────────────────────────────────────────
             var coverBorder = new Border
             {
                 Height = 110,
                 CornerRadius = new CornerRadius(8, 8, 0, 0),
-                ClipToBounds = true,
-                Background = GetCoverBrush(book.BookID)
+                ClipToBounds = true
             };
-            coverBorder.Child = MakeCoverText(book.Title);
+
+            // Если путь к картинке задан и файл существует — показываем картинку
+            if (!string.IsNullOrEmpty(book.CoverPath) &&
+                System.IO.File.Exists(book.CoverPath))
+            {
+                try
+                {
+                    var bmp = new System.Windows.Media.Imaging.BitmapImage();
+                    bmp.BeginInit();
+                    bmp.UriSource = new System.Uri(book.CoverPath);
+                    bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                    bmp.EndInit();
+
+                    coverBorder.Background = Brushes.Black;
+                    coverBorder.Child = new System.Windows.Controls.Image
+                    {
+                        Source = bmp,
+                        Stretch = System.Windows.Media.Stretch.UniformToFill
+                    };
+                }
+                catch
+                {
+                    // Если картинка не загрузилась — показываем градиент с инициалами
+                    coverBorder.Background = GetCoverBrush(book.BookID);
+                    coverBorder.Child = MakeCoverText(book.Title);
+                }
+            }
+            else
+            {
+                // Нет картинки — градиентная обложка с инициалами
+                coverBorder.Background = GetCoverBrush(book.BookID);
+                coverBorder.Child = MakeCoverText(book.Title);
+            }
+
             sp.Children.Add(coverBorder);
 
-            // ── ТЕКСТ ──
+            // ── ТЕКСТ ──────────────────────────────────────────
             var info = new StackPanel { Margin = new Thickness(8, 6, 8, 4) };
 
             info.Children.Add(new TextBlock
@@ -133,7 +165,6 @@ namespace BookPlatformWPF.Pages
                 Margin = new Thickness(0, 2, 0, 0)
             });
 
-            // Звёздочки + цифра рейтинга
             var ratingRow = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
@@ -154,9 +185,7 @@ namespace BookPlatformWPF.Pages
             info.Children.Add(ratingRow);
             sp.Children.Add(info);
 
-            // ── КНОПКИ ──
-            // Button в WPF .NET Framework не имеет CornerRadius —
-            // оборачиваем в Border чтобы сделать скруглённые углы
+            // ── КНОПКИ ─────────────────────────────────────────
             var btnPanel = new StackPanel
             {
                 Orientation = Orientation.Horizontal,

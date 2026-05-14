@@ -63,8 +63,8 @@ namespace BookPlatformWPF.Pages
 
             Core.DB.RoleRequests.Add(new RoleRequests
             {
-                UserID = SessionManager.UserID
-                // RequestDate ставится через DEFAULT в БД
+                UserID = SessionManager.UserID,
+                RequestDate = System.DateTime.Now
             });
 
             Core.DB.SaveChanges();
@@ -85,8 +85,9 @@ namespace BookPlatformWPF.Pages
             Core.DB.UnfreezeRequests.Add(new UnfreezeRequests
             {
                 UserID = SessionManager.UserID,
-                BookID = null,   // это заявка на пользователя, не на книгу
-                Reason = reason
+                BookID = null,   
+                Reason = reason,
+                RequestDate = System.DateTime.Now
             });
 
             Core.DB.SaveChanges();

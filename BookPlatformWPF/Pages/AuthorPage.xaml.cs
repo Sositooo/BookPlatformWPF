@@ -129,7 +129,8 @@ namespace BookPlatformWPF.Pages
             {
                 UserID = null,    // заявка на книгу — UserID пустой
                 BookID = bookId,
-                Reason = reason
+                Reason = reason,
+                RequestDate = System.DateTime.Now
             });
 
             Core.DB.SaveChanges();
